@@ -25,6 +25,10 @@ export default function TabsLayout() {
         options={{ title: 'Estoque', tabBarIcon: ({ color, size }) => <Ionicons name="layers-outline" size={size} color={color} /> }}
       />
       <Tabs.Screen
+        name="products"
+        options={{ title: 'Produtos', tabBarIcon: ({ color, size }) => <Ionicons name="pricetag-outline" size={size} color={color} /> }}
+      />
+      <Tabs.Screen
         name="integrations"
         options={{ title: 'Canais', tabBarIcon: ({ color, size }) => <Ionicons name="link-outline" size={size} color={color} /> }}
       />
