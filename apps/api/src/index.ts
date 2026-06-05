@@ -19,6 +19,7 @@ import { teamRoutes } from './routes/team'
 import { financialRoutes } from './routes/financial'
 import { returnsRoutes } from './routes/returns'
 import { performanceRoutes } from './routes/performance'
+import { repricingRoutes } from './routes/repricing'
 import { startWorkers } from './workers'
 
 const app = Fastify({ logger: true })
@@ -45,6 +46,7 @@ async function bootstrap() {
   await app.register(financialRoutes,     { prefix: '/financial' })
   await app.register(returnsRoutes,       { prefix: '/returns' })
   await app.register(performanceRoutes,   { prefix: '/performance' })
+  await app.register(repricingRoutes,     { prefix: '/repricing' })
 
   await startWorkers()
 

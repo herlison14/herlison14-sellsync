@@ -163,8 +163,10 @@ model Listing {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  store          Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product        Product         @relation(fields: [productId], references: [id])
+  repricingRules RepricingRule[]
+  priceHistory   PriceHistory[]
 
   @@unique([storeId, externalId])
   @@map("listings")
@@ -421,6 +423,50 @@ enum ReturnStatus {
   REFUNDED
   REJECTED
   CLOSED
+}
+
+// ─── REPRICING ────────────────────────────────────────────────────────────────
+
+model RepricingRule {
+  id           String      @id @default(cuid())
+  tenantId     String
+  name         String
+  listingId    String?
+  marketplace  Marketplace?
+  strategy     RepricingStrategy
+  targetMargin Decimal?    @db.Decimal(5, 2)
+  minPrice     Decimal?    @db.Decimal(12, 2)
+  maxPrice     Decimal?    @db.Decimal(12, 2)
+  adjustmentPct Decimal    @db.Decimal(5, 2) @default(5)
+  isActive     Boolean     @default(true)
+  lastRunAt    DateTime?
+  createdAt    DateTime    @default(now())
+
+  listing Listing? @relation(fields: [listingId], references: [id])
+
+  @@index([tenantId])
+  @@map("repricing_rules")
+}
+
+model PriceHistory {
+  id        String      @id @default(cuid())
+  tenantId  String
+  listingId String
+  price     Decimal     @db.Decimal(12, 2)
+  source    String      @default("manual")
+  createdAt DateTime    @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, createdAt])
+  @@map("price_history")
+}
+
+enum RepricingStrategy {
+  MAINTAIN_MARGIN
+  MATCH_LOWEST
+  BEAT_BY_PCT
+  FIXED_MARKUP
 }
 
 // ─── FINANCEIRO ───────────────────────────────────────────────────────────────
