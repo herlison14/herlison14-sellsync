@@ -1,0 +1,14 @@
+{
+  "name": "@sellsync/nfe",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@sellsync/database": "*",
+    "axios": "^1.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  }
+}

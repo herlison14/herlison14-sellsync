@@ -1,35 +1,23 @@
 import type { Job } from 'bullmq'
-import { prisma } from '@sellsync/database'
-// Usar SDK externo: NFe.io ou TecnoSpeed Plug4Market
-// npm install nfe-io-client
-// A emissão de NF-e não deve ser construída do zero — use provider certificado
+import { NFeService } from '@sellsync/nfe'
 
-export async function processNfe(job: Job<{ orderId: string; tenantId: string }>) {
-  const { orderId, tenantId } = job.data
+const service = new NFeService()
 
-  const order = await prisma.order.findUniqueOrThrow({
-    where: { id: orderId },
-    include: { items: true },
-  })
+export async function processNfe(job: Job<{ orderId: string; tenantId: string; action?: string; nfeId?: string; reason?: string }>) {
+  const { orderId, tenantId, action = 'emit', nfeId, reason } = job.data
 
-  const settings = await prisma.nfeSettings.findUniqueOrThrow({ where: { tenantId } })
+  if (action === 'emit') {
+    await service.emitForOrder(orderId, tenantId)
+    return
+  }
 
-  // TODO: Integrate with NFe.io SDK or TecnoSpeed Plug4Market
-  // Example with NFe.io:
-  // const nfe = new NFeClient({ apiKey: process.env.NFEIO_API_KEY })
-  // const result = await nfe.emit({
-  //   cnpj: settings.cnpj,
-  //   items: order.items.map(buildNfeItem),
-  //   buyer: { name: order.buyerName, document: order.buyerDocument },
-  //   total: order.total,
-  // })
+  if (action === 'poll' && nfeId) {
+    await service.pollStatus(orderId, nfeId)
+    return
+  }
 
-  // Update order with NF-e key
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      nfeStatus: 'PENDING',
-      // nfeKey: result.accessKey,
-    },
-  })
+  if (action === 'cancel' && reason) {
+    await service.cancel(orderId, tenantId, reason)
+    return
+  }
 }

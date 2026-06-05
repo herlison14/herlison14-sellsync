@@ -2,11 +2,15 @@ import type { Store } from '@sellsync/database'
 import { MercadoLivreAdapter } from './mercadolivre/adapter'
 import { ShopeeAdapter } from './shopee/adapter'
 import { AmazonAdapter } from './amazon/adapter'
+import { MagaluAdapter } from './magalu/adapter'
+import { AmericanasAdapter } from './americanas/adapter'
 import type { IMarketplaceAdapter } from './base/adapter'
 
 export { MercadoLivreAdapter } from './mercadolivre/adapter'
 export { ShopeeAdapter } from './shopee/adapter'
 export { AmazonAdapter } from './amazon/adapter'
+export { MagaluAdapter } from './magalu/adapter'
+export { AmericanasAdapter } from './americanas/adapter'
 export type { IMarketplaceAdapter, MarketplaceOrder, MarketplaceListing } from './base/adapter'
 
 export class MarketplaceAdapterFactory {
@@ -29,6 +33,20 @@ export class MarketplaceAdapterFactory {
           process.env.AMAZON_CLIENT_SECRET!,
           store.accessToken,
           process.env.AMAZON_MARKETPLACE_ID,
+        )
+
+      case 'MAGALU':
+        return new MagaluAdapter(
+          process.env.MAGALU_CLIENT_ID!,
+          process.env.MAGALU_CLIENT_SECRET!,
+          store.externalId,
+        )
+
+      case 'AMERICANAS':
+        return new AmericanasAdapter(
+          process.env.AMERICANAS_EMAIL!,
+          store.accessToken,
+          process.env.AMERICANAS_ACCOUNT_MANAGER!,
         )
 
       default:
