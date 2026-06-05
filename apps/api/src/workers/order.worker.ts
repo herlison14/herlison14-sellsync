@@ -2,6 +2,7 @@ import type { Job } from 'bullmq'
 import { prisma } from '@sellsync/database'
 import { MarketplaceAdapterFactory } from '@sellsync/integrations'
 import { inventorySyncQueue, nfeQueue } from './queues'
+import { notifyTenantNewOrder } from '../services/push.service'
 
 export async function processOrder(job: Job) {
   const { name, data } = job
@@ -66,6 +67,9 @@ export async function processOrder(job: Job) {
     if (order.status === 'CONFIRMED' && order.paidAt) {
       await nfeQueue.add('emit-nfe', { orderId: order.id, tenantId: store.tenantId })
     }
+
+    // Push notification for new orders
+    await notifyTenantNewOrder(store.tenantId, order.id, order.externalId)
   }
 }
 
