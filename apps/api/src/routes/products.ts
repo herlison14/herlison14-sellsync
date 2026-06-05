@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@sellsync/database'
+import { listingQueue } from '../workers/queues'
 
 const productSchema = z.object({
   sku: z.string().min(1).max(100),
@@ -106,8 +107,13 @@ export async function productsRoutes(app: FastifyInstance) {
         externalId: `pending-${Date.now()}`,
         title: body.title ?? product.name,
         price: body.price,
-        status: 'ACTIVE',
+        status: 'PAUSED',
       },
+    })
+
+    await listingQueue.add('publish-listing', { listingId: listing.id, tenantId }, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 },
     })
 
     return reply.code(202).send(listing)

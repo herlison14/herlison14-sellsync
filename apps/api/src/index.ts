@@ -11,6 +11,7 @@ import { authRoutes } from './routes/auth'
 import { nfeRoutes } from './routes/nfe'
 import { pricingRoutes } from './routes/pricing'
 import { reportsRoutes } from './routes/reports'
+import { billingRoutes } from './routes/billing'
 import { startWorkers } from './workers'
 
 const app = Fastify({ logger: true })
@@ -29,6 +30,7 @@ async function bootstrap() {
   await app.register(nfeRoutes,          { prefix: '/nfe' })
   await app.register(pricingRoutes,      { prefix: '/pricing' })
   await app.register(reportsRoutes,      { prefix: '/reports' })
+  await app.register(billingRoutes,      { prefix: '/billing' })
 
   await startWorkers()
 

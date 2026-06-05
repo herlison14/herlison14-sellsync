@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
+import { prisma } from '@sellsync/database'
 import { InventoryService } from '../services/inventory.service'
 
 const adjustSchema = z.object({
@@ -47,5 +48,19 @@ export async function inventoryRoutes(app: FastifyInstance) {
   app.get('/alerts/low-stock', async (req) => {
     const tenantId = (req.user as { tenantId: string }).tenantId
     return service.getLowStockAlerts(tenantId)
+  })
+
+  // Armazéns
+  app.get('/warehouses', async (req) => {
+    const tenantId = (req.user as { tenantId: string }).tenantId
+    return prisma.warehouse.findMany({ where: { tenantId }, orderBy: { createdAt: 'asc' } })
+  })
+
+  app.post('/warehouses', async (req, reply) => {
+    const tenantId = (req.user as { tenantId: string }).tenantId
+    const body = z.object({ name: z.string().min(2), address: z.record(z.unknown()).optional() }).parse(req.body)
+    const count = await prisma.warehouse.count({ where: { tenantId } })
+    const warehouse = await prisma.warehouse.create({ data: { tenantId, ...body, isDefault: count === 0 } })
+    return reply.code(201).send(warehouse)
   })
 }

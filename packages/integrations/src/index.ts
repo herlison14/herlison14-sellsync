@@ -4,6 +4,8 @@ import { ShopeeAdapter } from './shopee/adapter'
 import { AmazonAdapter } from './amazon/adapter'
 import { MagaluAdapter } from './magalu/adapter'
 import { AmericanasAdapter } from './americanas/adapter'
+import { SheinAdapter } from './shein/adapter'
+import { TikTokShopAdapter } from './tiktokshop/adapter'
 import type { IMarketplaceAdapter } from './base/adapter'
 
 export { MercadoLivreAdapter } from './mercadolivre/adapter'
@@ -11,6 +13,8 @@ export { ShopeeAdapter } from './shopee/adapter'
 export { AmazonAdapter } from './amazon/adapter'
 export { MagaluAdapter } from './magalu/adapter'
 export { AmericanasAdapter } from './americanas/adapter'
+export { SheinAdapter } from './shein/adapter'
+export { TikTokShopAdapter } from './tiktokshop/adapter'
 export type { IMarketplaceAdapter, MarketplaceOrder, MarketplaceListing } from './base/adapter'
 
 export class MarketplaceAdapterFactory {
@@ -47,6 +51,21 @@ export class MarketplaceAdapterFactory {
           process.env.AMERICANAS_EMAIL!,
           store.accessToken,
           process.env.AMERICANAS_ACCOUNT_MANAGER!,
+        )
+
+      case 'SHEIN':
+        return new SheinAdapter(
+          process.env.SHEIN_APP_KEY!,
+          process.env.SHEIN_APP_SECRET!,
+          store.accessToken,
+        )
+
+      case 'TIKTOK_SHOP':
+        return new TikTokShopAdapter(
+          process.env.TIKTOK_APP_KEY!,
+          process.env.TIKTOK_APP_SECRET!,
+          store.accessToken,
+          store.externalId,
         )
 
       default:
