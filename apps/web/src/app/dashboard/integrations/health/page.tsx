@@ -2,36 +2,42 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { ArrowLeft, RefreshCw, Plug } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useIntegrationsHealth, type StoreHealth, type HealthStatus } from '@/hooks/use-health'
 import { api } from '@/lib/api'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 const MP_EMOJI: Record<string, string> = {
   MERCADO_LIVRE: '🟡', SHOPEE: '🟠', AMAZON: '🔵',
   MAGALU: '🟢', AMERICANAS: '🔴', SHEIN: '⚫', TIKTOK_SHOP: '▶️',
 }
 
-const STATUS_CONFIG: Record<HealthStatus, { label: string; color: string; dot: string }> = {
-  ok:           { label: 'Operacional', color: 'text-green-700 bg-green-100', dot: 'bg-green-500' },
-  token_expired:{ label: 'Token expirado', color: 'text-yellow-700 bg-yellow-100', dot: 'bg-yellow-500' },
-  error:        { label: 'Erro de conexão', color: 'text-red-700 bg-red-100', dot: 'bg-red-500' },
-  unconfigured: { label: 'Desconectado', color: 'text-gray-500 bg-gray-100', dot: 'bg-gray-400' },
+const STATUS_CONFIG: Record<HealthStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'secondary'; dot: string }> = {
+  ok:            { label: 'Operacional',   variant: 'success',     dot: 'bg-emerald-500' },
+  token_expired: { label: 'Token expirado',variant: 'warning',     dot: 'bg-amber-500' },
+  error:         { label: 'Erro',          variant: 'destructive', dot: 'bg-red-500' },
+  unconfigured:  { label: 'Desconectado',  variant: 'secondary',   dot: 'bg-muted-foreground/40' },
 }
 
 function StatusBadge({ status }: { status: HealthStatus }) {
   const cfg = STATUS_CONFIG[status]
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.color}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+    <Badge variant={cfg.variant} className="gap-1.5">
+      <span className={cn('h-1.5 w-1.5 rounded-full', cfg.dot)} />
       {cfg.label}
-    </span>
+    </Badge>
   )
 }
 
 function LatencyBar({ ms }: { ms: number | null }) {
-  if (ms == null) return <span className="text-xs text-gray-400">—</span>
-  const color = ms < 500 ? 'text-green-600' : ms < 1500 ? 'text-yellow-600' : 'text-red-600'
-  return <span className={`text-xs font-mono font-semibold ${color}`}>{ms} ms</span>
+  if (ms == null) return <span className="text-xs text-muted-foreground/50">—</span>
+  const cls = ms < 500 ? 'text-emerald-600' : ms < 1500 ? 'text-amber-600' : 'text-red-600'
+  return <span className={cn('text-xs font-mono font-semibold', cls)}>{ms} ms</span>
 }
 
 export default function IntegrationHealthPage() {
@@ -54,133 +60,122 @@ export default function IntegrationHealthPage() {
   }
 
   const summary = stores ? {
-    ok: stores.filter((s) => s.status === 'ok').length,
-    warn: stores.filter((s) => s.status === 'token_expired').length,
+    ok:    stores.filter((s) => s.status === 'ok').length,
+    warn:  stores.filter((s) => s.status === 'token_expired').length,
     error: stores.filter((s) => s.status === 'error').length,
     total: stores.length,
   } : null
 
   return (
-    <div className="space-y-4 p-6 max-w-4xl">
+    <div className="flex flex-col gap-5 p-6 animate-fade-in max-w-4xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/integrations" className="text-sm text-gray-400 hover:text-gray-600">← Voltar</Link>
-          <h1 className="text-2xl font-bold">Health dos Canais</h1>
+          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+            <Link href="/dashboard/integrations"><ArrowLeft className="h-4 w-4" /></Link>
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Status dos Canais</h1>
+            {dataUpdatedAt > 0 && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Atualizado às {new Date(dataUpdatedAt).toLocaleTimeString('pt-BR')}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {dataUpdatedAt > 0 && (
-            <span className="text-xs text-gray-400">
-              Atualizado: {new Date(dataUpdatedAt).toLocaleTimeString('pt-BR')}
-            </span>
-          )}
-          <button
-            onClick={recheckAll}
-            disabled={isLoading}
-            className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-          >
-            ↻ Verificar tudo
-          </button>
-        </div>
+        <Button variant="outline" size="sm" onClick={recheckAll} disabled={isLoading}>
+          <RefreshCw className="h-3.5 w-3.5" /> Verificar tudo
+        </Button>
       </div>
 
-      {/* Summary cards */}
       {summary && (
         <div className="grid grid-cols-3 gap-4">
-          <div className="rounded-lg border bg-white p-4 text-center">
-            <p className="text-2xl font-bold text-green-600">{summary.ok}</p>
-            <p className="text-xs text-gray-500 mt-1">Operacional</p>
-          </div>
-          <div className="rounded-lg border bg-white p-4 text-center">
-            <p className="text-2xl font-bold text-yellow-600">{summary.warn}</p>
-            <p className="text-xs text-gray-500 mt-1">Token expirado</p>
-          </div>
-          <div className="rounded-lg border bg-white p-4 text-center">
-            <p className="text-2xl font-bold text-red-600">{summary.error}</p>
-            <p className="text-xs text-gray-500 mt-1">Com erro</p>
-          </div>
+          {[
+            { label: 'Operacional', value: summary.ok,   cls: 'text-emerald-600' },
+            { label: 'Token expirado', value: summary.warn,  cls: 'text-amber-600' },
+            { label: 'Com erro',    value: summary.error, cls: 'text-red-600' },
+          ].map((s) => (
+            <Card key={s.label}>
+              <CardContent className="p-4 text-center">
+                <p className={cn('text-2xl font-bold', s.cls)}>{s.value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
       {isLoading ? (
         <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-100" />
-          ))}
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
         </div>
       ) : (stores ?? []).length === 0 ? (
-        <div className="rounded-lg border bg-white p-10 text-center text-gray-400">
-          <p className="text-3xl mb-3">🔌</p>
-          <p className="font-medium">Nenhum canal conectado</p>
-          <Link href="/dashboard/integrations" className="mt-2 inline-block text-sm text-blue-600 hover:underline">
+        <Card className="py-16 text-center">
+          <Plug className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+          <p className="font-semibold">Nenhum canal conectado</p>
+          <Link href="/dashboard/integrations" className="mt-2 inline-block text-sm text-primary hover:underline">
             Conectar marketplace →
           </Link>
-        </div>
+        </Card>
       ) : (
-        <div className="rounded-lg border bg-white overflow-hidden">
+        <Card className="overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="border-b bg-muted/40">
               <tr>
                 {['Canal', 'Status', 'Latência', 'Token expira em', 'Última verificação', ''].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {(stores ?? []).map((s) => (
-                <tr key={s.storeId} className="border-b last:border-0 hover:bg-gray-50">
+                <tr key={s.storeId} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{MP_EMOJI[s.marketplace] ?? '🏪'}</span>
                       <div>
-                        <p className="font-medium text-gray-800">{s.name}</p>
-                        <p className="text-xs text-gray-400">{s.marketplace.replace('_', ' ')}</p>
+                        <p className="font-medium">{s.name}</p>
+                        <p className="text-xs text-muted-foreground">{s.marketplace.replace('_', ' ')}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={s.status} />
                     {s.errorMessage && (
-                      <p className="mt-1 text-xs text-red-500 max-w-xs truncate" title={s.errorMessage}>
+                      <p className="mt-1 text-xs text-destructive max-w-xs truncate" title={s.errorMessage}>
                         {s.errorMessage}
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    <LatencyBar ms={s.latencyMs} />
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-500">
+                  <td className="px-4 py-3"><LatencyBar ms={s.latencyMs} /></td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
                     {s.tokenExpiresAt
                       ? (() => {
-                          const d = new Date(s.tokenExpiresAt)
-                          const diffH = Math.round((d.getTime() - Date.now()) / 3_600_000)
+                          const diffH = Math.round((new Date(s.tokenExpiresAt).getTime() - Date.now()) / 3_600_000)
                           return diffH < 0
-                            ? <span className="text-red-600 font-semibold">Expirado</span>
+                            ? <span className="text-destructive font-semibold">Expirado</span>
                             : diffH < 24
-                            ? <span className="text-yellow-600 font-semibold">{diffH}h restantes</span>
+                            ? <span className="text-amber-600 font-semibold">{diffH}h restantes</span>
                             : <span>{Math.round(diffH / 24)}d restantes</span>
                         })()
                       : '—'}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-400">
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
                     {new Date(s.lastCheckedAt).toLocaleString('pt-BR')}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => recheckStore(s.storeId)}
-                      disabled={!!rechecking[s.storeId]}
-                      className="rounded-md border px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-                    >
-                      {rechecking[s.storeId] ? '...' : 'Verificar'}
-                    </button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs"
+                      onClick={() => recheckStore(s.storeId)} disabled={!!rechecking[s.storeId]}>
+                      {rechecking[s.storeId] ? <RefreshCw className="h-3 w-3 animate-spin" /> : 'Verificar'}
+                    </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
-      <p className="text-xs text-gray-400">Atualização automática a cada 60 segundos.</p>
+      <p className="text-xs text-muted-foreground">Atualização automática a cada 60 segundos.</p>
     </div>
   )
 }

@@ -1,113 +1,100 @@
 'use client'
 
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { Package } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 
-const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  PENDING:       { label: 'Aguardando',   color: 'bg-yellow-100 text-yellow-800' },
-  CONFIRMED:     { label: 'Confirmado',   color: 'bg-blue-100 text-blue-800' },
-  INVOICED:      { label: 'NF Emitida',   color: 'bg-purple-100 text-purple-800' },
-  READY_TO_SHIP: { label: 'Pronto p/ Envio', color: 'bg-indigo-100 text-indigo-800' },
-  SHIPPED:       { label: 'Enviado',      color: 'bg-cyan-100 text-cyan-800' },
-  DELIVERED:     { label: 'Entregue',     color: 'bg-green-100 text-green-800' },
-  CANCELLED:     { label: 'Cancelado',    color: 'bg-red-100 text-red-800' },
-  RETURNED:      { label: 'Devolvido',    color: 'bg-gray-100 text-gray-800' },
+const MP_EMOJI: Record<string, string> = {
+  MERCADO_LIVRE: '🟡', SHOPEE: '🟠', AMAZON: '🔵',
+  MAGALU: '🟢', AMERICANAS: '🔴', SHEIN: '⚫', TIKTOK_SHOP: '▶️',
+}
+
+const STATUS_CFG: Record<string, { label: string; variant: 'warning' | 'info' | 'success' | 'destructive' | 'secondary' }> = {
+  PENDING:       { label: 'Aguardando',     variant: 'warning' },
+  CONFIRMED:     { label: 'Confirmado',     variant: 'info' },
+  INVOICED:      { label: 'NF Emitida',     variant: 'info' },
+  READY_TO_SHIP: { label: 'Pronto p/ Env.', variant: 'info' },
+  SHIPPED:       { label: 'Enviado',        variant: 'success' },
+  DELIVERED:     { label: 'Entregue',       variant: 'success' },
+  CANCELLED:     { label: 'Cancelado',      variant: 'destructive' },
+  RETURNED:      { label: 'Devolvido',      variant: 'secondary' },
+}
+
+const NFE_CFG: Record<string, { label: string; variant: 'success' | 'warning' | 'destructive' | 'secondary' }> = {
+  ISSUED:    { label: 'Emitida',  variant: 'success' },
+  EMITTING:  { label: 'Emitindo', variant: 'warning' },
+  ERROR:     { label: 'Erro',     variant: 'destructive' },
+  PENDING:   { label: 'Pendente', variant: 'secondary' },
+  CANCELLED: { label: 'Cancelada',variant: 'secondary' },
 }
 
 interface Order {
-  id: string
-  externalId: string
-  marketplace: string
+  id: string; externalId: string; marketplace: string
   store: { name: string; marketplace: string }
-  status: string
-  buyerName: string
-  total: number
-  createdAt: string
-  nfeStatus?: string
-  trackingCode?: string
+  status: string; buyerName: string; total: number; createdAt: string; nfeStatus?: string
 }
 
-interface Props {
-  orders: Order[]
-  isLoading: boolean
-  selected: string[]
-  onSelect: (ids: string[]) => void
-}
+export function OrdersTable({ orders, isLoading, selected, onSelect }: {
+  orders: Order[]; isLoading: boolean; selected: string[]; onSelect: (ids: string[]) => void
+}) {
+  const toggleAll = () => onSelect(selected.length === orders.length ? [] : orders.map((o) => o.id))
+  const toggle = (id: string) => onSelect(selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id])
 
-export function OrdersTable({ orders, isLoading, selected, onSelect }: Props) {
-  function toggleAll() {
-    onSelect(selected.length === orders.length ? [] : orders.map((o) => o.id))
-  }
-
-  function toggle(id: string) {
-    onSelect(selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id])
-  }
-
-  if (isLoading) {
+  if (orders.length === 0 && !isLoading) {
     return (
-      <div className="rounded-lg border bg-white">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 border-b p-4 last:border-0 animate-pulse">
-            <div className="h-4 w-4 rounded bg-gray-200" />
-            <div className="h-4 flex-1 rounded bg-gray-200" />
-            <div className="h-4 w-24 rounded bg-gray-200" />
-          </div>
-        ))}
-      </div>
+      <Card className="py-16 text-center">
+        <Package className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+        <p className="font-semibold">Nenhum pedido encontrado</p>
+        <p className="text-sm text-muted-foreground mt-1">Tente ajustar os filtros</p>
+      </Card>
     )
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-white">
+    <Card className="overflow-hidden">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+        <thead className="border-b bg-muted/40">
           <tr>
-            <th className="p-3 w-10">
-              <input type="checkbox" checked={selected.length === orders.length && orders.length > 0} onChange={toggleAll} />
+            <th className="w-10 px-4 py-3">
+              <input type="checkbox" className="rounded" checked={selected.length === orders.length && orders.length > 0} onChange={toggleAll} />
             </th>
-            <th className="p-3 text-left">Pedido</th>
-            <th className="p-3 text-left">Canal</th>
-            <th className="p-3 text-left">Comprador</th>
-            <th className="p-3 text-left">Status</th>
-            <th className="p-3 text-left">NF-e</th>
-            <th className="p-3 text-right">Total</th>
-            <th className="p-3 text-left">Data</th>
+            {['Pedido', 'Canal', 'Comprador', 'Status', 'NF-e', 'Total', 'Data'].map((h) => (
+              <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">{h}</th>
+            ))}
           </tr>
         </thead>
-        <tbody className="divide-y">
-          {orders.length === 0 && (
-            <tr>
-              <td colSpan={8} className="p-8 text-center text-gray-400">Nenhum pedido encontrado</td>
-            </tr>
-          )}
+        <tbody>
           {orders.map((order) => {
-            const status = STATUS_LABEL[order.status] ?? { label: order.status, color: 'bg-gray-100 text-gray-700' }
+            const sc = STATUS_CFG[order.status] ?? { label: order.status, variant: 'secondary' as const }
+            const nfc = order.nfeStatus ? NFE_CFG[order.nfeStatus] : null
             return (
-              <tr key={order.id} className="hover:bg-gray-50">
-                <td className="p-3">
-                  <input type="checkbox" checked={selected.includes(order.id)} onChange={() => toggle(order.id)} />
+              <tr key={order.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors group">
+                <td className="px-4 py-3">
+                  <input type="checkbox" className="rounded" checked={selected.includes(order.id)} onChange={() => toggle(order.id)} />
                 </td>
-                <td className="p-3 font-mono text-xs">{order.externalId}</td>
-                <td className="p-3">
-                  <span className="font-medium">{order.store.marketplace}</span>
-                  <span className="block text-xs text-gray-400">{order.store.name}</span>
+                <td className="px-4 py-3">
+                  <Link href={`/dashboard/orders/${order.id}`} className="font-mono text-xs font-semibold text-primary hover:underline">
+                    #{order.externalId}
+                  </Link>
                 </td>
-                <td className="p-3">{order.buyerName ?? '—'}</td>
-                <td className="p-3">
-                  <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${status.color}`}>
-                    {status.label}
-                  </span>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-1.5">
+                    <span>{MP_EMOJI[order.marketplace] ?? '🏪'}</span>
+                    <span className="text-xs text-muted-foreground">{order.store.name}</span>
+                  </div>
                 </td>
-                <td className="p-3 text-xs">
-                  {order.nfeStatus === 'AUTHORIZED' && <span className="text-green-600">Autorizada</span>}
-                  {order.nfeStatus === 'PENDING' && <span className="text-yellow-600">Pendente</span>}
-                  {order.nfeStatus === 'REJECTED' && <span className="text-red-600">Rejeitada</span>}
-                  {!order.nfeStatus && <span className="text-gray-400">—</span>}
+                <td className="px-4 py-3 max-w-[140px] truncate">{order.buyerName ?? '—'}</td>
+                <td className="px-4 py-3"><Badge variant={sc.variant} className="text-xs">{sc.label}</Badge></td>
+                <td className="px-4 py-3">
+                  {nfc ? <Badge variant={nfc.variant} className="text-xs">{nfc.label}</Badge> : <span className="text-xs text-muted-foreground/50">—</span>}
                 </td>
-                <td className="p-3 text-right font-medium">
+                <td className="px-4 py-3 font-semibold">
                   {Number(order.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </td>
-                <td className="p-3 text-xs text-gray-500">
+                <td className="px-4 py-3 text-xs text-muted-foreground">
                   {format(new Date(order.createdAt), 'dd/MM/yy HH:mm', { locale: ptBR })}
                 </td>
               </tr>
@@ -115,6 +102,6 @@ export function OrdersTable({ orders, isLoading, selected, onSelect }: Props) {
           })}
         </tbody>
       </table>
-    </div>
+    </Card>
   )
 }
