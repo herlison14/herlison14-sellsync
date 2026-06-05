@@ -1,0 +1,252 @@
+'use client'
+
+import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { api } from '@/lib/api'
+
+interface PreviewRow {
+  sku: string
+  name: string
+  brand?: string
+  ncm?: string
+  weight?: number
+  stock?: number
+  price?: number
+}
+
+interface ImportResult {
+  created: number
+  updated: number
+  errors: Array<{ row: number; sku: string; reason: string }>
+}
+
+export default function ImportProductsPage() {
+  const router = useRouter()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [file, setFile] = useState<File | null>(null)
+  const [preview, setPreview] = useState<PreviewRow[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<ImportResult | null>(null)
+  const [error, setError] = useState('')
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setFile(f)
+    setResult(null)
+    setError('')
+    setPreview(null)
+
+    const fd = new FormData()
+    fd.append('file', f)
+    try {
+      setLoading(true)
+      const res = await api.post('/import/products/preview', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setPreview(res.data.preview)
+      setTotal(res.data.total)
+    } catch (err: any) {
+      setError(err?.response?.data?.error ?? 'Erro ao ler arquivo')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleImport() {
+    if (!file) return
+    setLoading(true)
+    setError('')
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await api.post('/import/products', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setResult(res.data)
+    } catch (err: any) {
+      setError(err?.response?.data?.error ?? 'Erro ao importar')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4 p-6 max-w-4xl">
+      <div className="flex items-center gap-3">
+        <Link href="/dashboard/products" className="text-sm text-gray-400 hover:text-gray-600">← Voltar</Link>
+        <h1 className="text-2xl font-bold">Importar Produtos</h1>
+      </div>
+
+      {/* Instructions */}
+      <div className="rounded-lg border bg-blue-50 border-blue-200 p-4 text-sm text-blue-800 space-y-2">
+        <p className="font-semibold">Como usar:</p>
+        <ol className="list-decimal ml-4 space-y-1">
+          <li>Baixe o modelo de planilha abaixo</li>
+          <li>Preencha com seus produtos (uma linha por produto)</li>
+          <li>Faça upload do arquivo CSV ou XLSX</li>
+          <li>Revise a pré-visualização e confirme a importação</li>
+        </ol>
+        <a
+          href="/templates/products-template.csv"
+          download
+          className="inline-flex items-center gap-1 mt-2 text-blue-700 font-semibold hover:underline"
+        >
+          ↓ Baixar modelo CSV
+        </a>
+      </div>
+
+      {/* Colunas aceitas */}
+      <div className="rounded-lg border bg-white p-4 text-sm space-y-2">
+        <p className="font-semibold text-gray-700">Colunas aceitas (cabeçalho em PT ou EN):</p>
+        <div className="grid grid-cols-3 gap-1 text-xs text-gray-500">
+          {[
+            ['sku / SKU', 'obrigatório'],
+            ['name / nome', 'obrigatório'],
+            ['description / descrição', 'opcional'],
+            ['brand / marca', 'opcional'],
+            ['ncm / NCM', 'opcional'],
+            ['gtin / ean / EAN', 'opcional'],
+            ['weight / peso', 'kg'],
+            ['height / altura', 'cm'],
+            ['width / largura', 'cm'],
+            ['length / comprimento', 'cm'],
+            ['images / imagens', 'URLs separadas por vírgula'],
+            ['stock / estoque', 'quantidade inicial'],
+          ].map(([col, note]) => (
+            <div key={col} className="flex gap-1">
+              <code className="font-mono text-gray-700">{col}</code>
+              <span className="text-gray-400">— {note}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Upload zone */}
+      <div
+        className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
+        onClick={() => fileRef.current?.click()}
+      >
+        <input
+          ref={fileRef} type="file" accept=".csv,.xls,.xlsx" className="hidden"
+          onChange={handleFileChange}
+        />
+        <p className="text-3xl mb-2">📂</p>
+        <p className="text-sm font-medium text-gray-700">
+          {file ? file.name : 'Clique ou arraste um arquivo CSV ou XLSX'}
+        </p>
+        <p className="text-xs text-gray-400 mt-1">Máximo 2.000 produtos · 10 MB</p>
+      </div>
+
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
+      {/* Preview */}
+      {preview && !result && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Pré-visualização: <strong>{preview.length}</strong> de <strong>{total}</strong> produtos
+              {total > 10 && <span className="text-gray-400"> (mostrando primeiros 10)</span>}
+            </p>
+            <button
+              onClick={handleImport}
+              disabled={loading}
+              className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+            >
+              {loading ? 'Importando...' : `✓ Confirmar importação (${total} produtos)`}
+            </button>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-left">
+                <tr>
+                  {['SKU', 'Nome', 'Marca', 'NCM', 'Peso (kg)', 'Estoque'].map((h) => (
+                    <th key={h} className="px-3 py-2 text-xs font-semibold text-gray-500 border-b">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {preview.map((row, i) => (
+                  <tr key={i} className="border-b last:border-0 hover:bg-gray-50">
+                    <td className="px-3 py-2 font-mono text-gray-600">{row.sku}</td>
+                    <td className="px-3 py-2 font-medium max-w-xs truncate">{row.name}</td>
+                    <td className="px-3 py-2 text-gray-500">{row.brand ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-gray-400">{row.ncm ?? '—'}</td>
+                    <td className="px-3 py-2 text-gray-500">{row.weight ?? '—'}</td>
+                    <td className="px-3 py-2 text-gray-500">{row.stock ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Result */}
+      {result && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="rounded-lg border bg-green-50 border-green-200 p-4 text-center">
+              <p className="text-3xl font-bold text-green-700">{result.created}</p>
+              <p className="text-sm text-green-600 mt-1">Produtos criados</p>
+            </div>
+            <div className="rounded-lg border bg-blue-50 border-blue-200 p-4 text-center">
+              <p className="text-3xl font-bold text-blue-700">{result.updated}</p>
+              <p className="text-sm text-blue-600 mt-1">Produtos atualizados</p>
+            </div>
+            <div className={`rounded-lg border p-4 text-center ${result.errors.length > 0 ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
+              <p className={`text-3xl font-bold ${result.errors.length > 0 ? 'text-red-700' : 'text-gray-400'}`}>{result.errors.length}</p>
+              <p className={`text-sm mt-1 ${result.errors.length > 0 ? 'text-red-600' : 'text-gray-400'}`}>Erros</p>
+            </div>
+          </div>
+
+          {result.errors.length > 0 && (
+            <div className="rounded-lg border overflow-hidden">
+              <div className="bg-red-50 px-4 py-2 border-b">
+                <p className="text-sm font-semibold text-red-700">Linhas com erro</p>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-left border-b">
+                  <tr>
+                    {['Linha', 'SKU', 'Motivo'].map((h) => (
+                      <th key={h} className="px-3 py-2 text-xs font-semibold text-gray-500">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.errors.map((e, i) => (
+                    <tr key={i} className="border-b last:border-0">
+                      <td className="px-3 py-2 text-gray-500">{e.row}</td>
+                      <td className="px-3 py-2 font-mono text-gray-600">{e.sku || '—'}</td>
+                      <td className="px-3 py-2 text-red-600">{e.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => router.push('/dashboard/products')}
+              className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Ver produtos →
+            </button>
+            <button
+              onClick={() => { setFile(null); setPreview(null); setResult(null); setError('') }}
+              className="rounded-lg border px-5 py-2 text-sm hover:bg-gray-50"
+            >
+              Nova importação
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

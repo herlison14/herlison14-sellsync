@@ -18,12 +18,20 @@ export default function ProductsPage() {
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Produtos</h1>
-        <Link
-          href="/dashboard/products/new"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          + Novo Produto
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/dashboard/products/import"
+            className="rounded-lg border px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            ↑ Importar
+          </Link>
+          <Link
+            href="/dashboard/products/new"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            + Novo Produto
+          </Link>
+        </div>
       </div>
 
       <input

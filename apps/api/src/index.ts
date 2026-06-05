@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
+import multipart from '@fastify/multipart'
 import { ordersRoutes } from './routes/orders'
 import { inventoryRoutes } from './routes/inventory'
 import { productsRoutes } from './routes/products'
@@ -12,6 +13,7 @@ import { nfeRoutes } from './routes/nfe'
 import { pricingRoutes } from './routes/pricing'
 import { reportsRoutes } from './routes/reports'
 import { billingRoutes } from './routes/billing'
+import { importRoutes } from './routes/import'
 import { startWorkers } from './workers'
 
 const app = Fastify({ logger: true })
@@ -20,6 +22,7 @@ async function bootstrap() {
   await app.register(cors, { origin: process.env.WEB_URL ?? '*' })
   await app.register(jwt, { secret: process.env.JWT_SECRET! })
   await app.register(rateLimit, { max: 200, timeWindow: '1 minute' })
+  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } }) // 10 MB
 
   await app.register(authRoutes,         { prefix: '/auth' })
   await app.register(ordersRoutes,       { prefix: '/orders' })
@@ -31,6 +34,7 @@ async function bootstrap() {
   await app.register(pricingRoutes,      { prefix: '/pricing' })
   await app.register(reportsRoutes,      { prefix: '/reports' })
   await app.register(billingRoutes,      { prefix: '/billing' })
+  await app.register(importRoutes,       { prefix: '/import' })
 
   await startWorkers()
 
