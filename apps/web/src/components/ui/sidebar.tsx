@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, ShoppingCart, Warehouse, Package,
   Plug, DollarSign, BarChart3, Settings, ChevronRight,
-  Zap, Banknote, PackageX,
+  Zap, Banknote, PackageX, Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +18,7 @@ const NAV = [
   { href: '/dashboard/pricing',      label: 'Precificação', icon: DollarSign },
   { href: '/dashboard/financial',    label: 'Financeiro',   icon: Banknote },
   { href: '/dashboard/returns',      label: 'Devoluções',   icon: PackageX },
+  { href: '/dashboard/performance',  label: 'Performance',  icon: Activity },
   { href: '/dashboard/reports',      label: 'Relatórios',   icon: BarChart3 },
   { href: '/dashboard/settings',     label: 'Configurações',icon: Settings },
 ]
