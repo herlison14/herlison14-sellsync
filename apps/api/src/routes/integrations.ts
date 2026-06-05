@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import axios from 'axios'
 import { prisma } from '@sellsync/database'
 import { z } from 'zod'
+import { checkAllStoresHealth, checkStoreHealth } from '../services/health.service'
 
 export async function integrationsRoutes(app: FastifyInstance) {
   // ─── Mercado Livre OAuth ───────────────────────────────────────────────────
@@ -145,5 +146,19 @@ export async function integrationsRoutes(app: FastifyInstance) {
       where: { id, tenantId },
       data: { isActive: false },
     })
+  })
+
+  // ─── Health check ─────────────────────────────────────────────────────────
+
+  app.get('/health', async (req) => {
+    await req.jwtVerify()
+    const { tenantId } = req.user as { tenantId: string }
+    return checkAllStoresHealth(tenantId)
+  })
+
+  app.get('/health/:storeId', async (req) => {
+    await req.jwtVerify()
+    const { storeId } = req.params as { storeId: string }
+    return checkStoreHealth(storeId)
   })
 }

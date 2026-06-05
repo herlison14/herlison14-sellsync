@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useStores } from '@/hooks/use-stores'
 import { MarketplaceCard } from '@/components/integrations/marketplace-card'
 
@@ -16,8 +17,18 @@ export default function IntegrationsPage() {
 
   return (
     <div className="space-y-4 p-6">
-      <h1 className="text-2xl font-bold">Integrações</h1>
-      <p className="text-gray-500">Conecte suas lojas nos marketplaces</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Integrações</h1>
+          <p className="text-gray-500">Conecte suas lojas nos marketplaces</p>
+        </div>
+        <Link
+          href="/dashboard/integrations/health"
+          className="rounded-lg border px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+        >
+          📊 Ver status de conexão
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {AVAILABLE_MARKETPLACES.map((mp) => {
