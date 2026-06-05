@@ -95,9 +95,10 @@ model Store {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  listings Listing[]
-  orders   Order[]
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  listings     Listing[]
+  orders       Order[]
+  financialTxs FinancialTransaction[] @relation("FinancialStore")
 
   @@unique([tenantId, marketplace, externalId])
   @@map("stores")
@@ -353,6 +354,41 @@ enum PricingType {
   MARGIN_PERCENTAGE
   FIXED_ADDITION
   FIXED_PRICE
+}
+
+// ─── FINANCEIRO ───────────────────────────────────────────────────────────────
+
+model FinancialTransaction {
+  id            String           @id @default(cuid())
+  tenantId      String
+  orderId       String?
+  storeId       String?
+  marketplace   Marketplace?
+  type          FinancialTxType
+  amount        Decimal          @db.Decimal(12, 4)
+  currency      String           @default("BRL")
+  description   String?
+  externalId    String?
+  referenceDate DateTime
+  createdAt     DateTime         @default(now())
+
+  order Store? @relation("FinancialStore", fields: [storeId], references: [id])
+
+  @@index([tenantId, referenceDate])
+  @@index([tenantId, type])
+  @@map("financial_transactions")
+}
+
+enum FinancialTxType {
+  SALE
+  MARKETPLACE_FEE
+  SHIPPING_COST
+  SHIPPING_CREDIT
+  COMMISSION
+  REFUND
+  CHARGEBACK
+  ADVERTISEMENT
+  OTHER
 }
 
 // ─── NOTIFICAÇÕES PUSH ────────────────────────────────────────────────────────
