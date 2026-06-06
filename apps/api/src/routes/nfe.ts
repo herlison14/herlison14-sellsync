@@ -61,6 +61,28 @@ export async function nfeRoutes(app: FastifyInstance) {
     return reply.code(202).send({ message: 'Cancelamento solicitado' })
   })
 
+  // Emitir NF-e em lote
+  app.post('/batch-emit', async (req, reply) => {
+    const { tenantId } = req.user as { tenantId: string }
+    const { orderIds } = z.object({ orderIds: z.array(z.string()).min(1).max(100) }).parse(req.body)
+
+    const jobs = await Promise.all(
+      orderIds.map((orderId) =>
+        nfeQueue.add('emit-nfe', { orderId, tenantId, action: 'emit' }, {
+          priority: 2,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+        })
+      )
+    )
+
+    return reply.code(202).send({
+      message: 'Emissão em lote iniciada',
+      queued: jobs.length,
+      orderIds,
+    })
+  })
+
   // Download do PDF da NF-e
   app.get('/orders/:orderId/pdf', async (req, reply) => {
     const { orderId } = req.params as { orderId: string }

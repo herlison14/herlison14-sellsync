@@ -23,8 +23,9 @@ model Tenant {
   products     Product[]
   orders       Order[]
   warehouses   Warehouse[]
-  nfeSettings  NfeSettings?
-  returns      Return[]
+  nfeSettings   NfeSettings?
+  returns       Return[]
+  notifications Notification[]
 
   @@map("tenants")
 }
@@ -502,6 +503,40 @@ enum FinancialTxType {
   CHARGEBACK
   ADVERTISEMENT
   OTHER
+}
+
+// ─── NOTIFICAÇÕES IN-APP ─────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  tenantId  String
+  userId    String?
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean          @default(false)
+  metadata  Json             @default("{}")
+  createdAt DateTime         @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isRead])
+  @@index([tenantId, createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  NEW_ORDER
+  ORDER_CANCELLED
+  LOW_STOCK
+  STOCK_OUT
+  PRICE_CHANGED
+  NF_E_ISSUED
+  NF_E_ERROR
+  RETURN_REQUESTED
+  INTEGRATION_ERROR
+  SYSTEM
 }
 
 // ─── NOTIFICAÇÕES PUSH ────────────────────────────────────────────────────────

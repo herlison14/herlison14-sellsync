@@ -1,10 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { FileText, Loader2, Printer, X } from 'lucide-react'
 import { api } from '@/lib/api'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export function BulkActionsBar({ selectedIds, onClear }: { selectedIds: string[]; onClear: () => void }) {
   const queryClient = useQueryClient()
+  const [queued, setQueued] = useState<number | null>(null)
 
   const printLabels = useMutation({
     mutationFn: async () => {
@@ -14,38 +19,63 @@ export function BulkActionsBar({ selectedIds, onClear }: { selectedIds: string[]
     },
   })
 
-  const emitNfe = useMutation({
-    mutationFn: async () => {
-      await Promise.all(selectedIds.map((id) => api.post(`/orders/${id}/invoice`)))
-    },
-    onSuccess: () => {
+  const batchEmit = useMutation({
+    mutationFn: async () => (await api.post('/nfe/batch-emit', { orderIds: selectedIds })).data,
+    onSuccess: (data) => {
+      setQueued(data.queued)
       queryClient.invalidateQueries({ queryKey: ['orders'] })
-      onClear()
+      setTimeout(() => {
+        setQueued(null)
+        onClear()
+      }, 3000)
     },
   })
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2">
-      <span className="text-sm font-medium text-blue-800">{selectedIds.length} selecionados</span>
-      <div className="flex gap-2 ml-auto">
-        <button
-          onClick={() => printLabels.mutate()}
-          disabled={printLabels.isPending}
-          className="rounded-md bg-white border px-3 py-1.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
-        >
-          Imprimir Etiquetas
-        </button>
-        <button
-          onClick={() => emitNfe.mutate()}
-          disabled={emitNfe.isPending}
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {emitNfe.isPending ? 'Emitindo...' : 'Emitir NF-e'}
-        </button>
-        <button onClick={onClear} className="text-sm text-gray-500 hover:text-gray-700 px-2">
-          Limpar
-        </button>
-      </div>
+    <div className={cn(
+      'flex items-center gap-3 rounded-lg border px-4 py-2.5 transition-colors',
+      queued !== null
+        ? 'border-emerald-200 bg-emerald-50'
+        : 'border-blue-200 bg-blue-50'
+    )}>
+      <span className={cn('text-sm font-semibold', queued !== null ? 'text-emerald-800' : 'text-blue-800')}>
+        {queued !== null
+          ? `${queued} NF-e(s) enfileiradas para emissão`
+          : `${selectedIds.length} pedido(s) selecionado(s)`}
+      </span>
+
+      {queued === null && (
+        <div className="flex gap-2 ml-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => printLabels.mutate()}
+            disabled={printLabels.isPending}
+          >
+            {printLabels.isPending
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <Printer className="h-3.5 w-3.5" />}
+            Imprimir Etiquetas
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => batchEmit.mutate()}
+            disabled={batchEmit.isPending}
+          >
+            {batchEmit.isPending
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <FileText className="h-3.5 w-3.5" />}
+            {batchEmit.isPending
+              ? `Enfileirando ${selectedIds.length} NF-e...`
+              : 'Emitir NF-e'}
+          </Button>
+
+          <Button variant="ghost" size="sm" onClick={onClear}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

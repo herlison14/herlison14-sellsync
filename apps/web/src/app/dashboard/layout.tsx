@@ -1,13 +1,19 @@
 import type { ReactNode } from 'react'
 import { Sidebar } from '@/components/ui/sidebar'
 import { QueryProvider } from '@/components/ui/query-provider'
+import { NotificationBell } from '@/components/ui/notification-bell'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <QueryProvider>
       <div className="flex h-screen overflow-hidden bg-muted/30">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <header className="flex h-12 shrink-0 items-center justify-end border-b bg-card px-4 gap-2">
+            <NotificationBell />
+          </header>
+          <main className="flex-1 overflow-y-auto">{children}</main>
+        </div>
       </div>
     </QueryProvider>
   )
