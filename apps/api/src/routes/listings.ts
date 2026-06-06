@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@sellsync/database'
+import { logAudit } from '../services/audit.service'
 
 export async function listingsRoutes(app: FastifyInstance) {
   app.addHook('onRequest', async (req) => { await req.jwtVerify() })
@@ -58,7 +59,10 @@ export async function listingsRoutes(app: FastifyInstance) {
     })
     if (!listing) return reply.code(404).send({ error: 'Anúncio não encontrado' })
 
+    const before = { price: listing.price, status: listing.status, title: listing.title }
     const updated = await prisma.listing.update({ where: { id }, data: body })
+    const { tenantId, userId, name: userName } = (req.user as any)
+    logAudit({ tenantId, userId, userName, action: 'UPDATE', entity: 'Listing', entityId: id, before, after: body, ip: req.ip }).catch(() => {})
     return updated
   })
 
@@ -95,6 +99,8 @@ export async function listingsRoutes(app: FastifyInstance) {
     if (!listing) return reply.code(404).send({ error: 'Anúncio não encontrado' })
 
     await prisma.listing.delete({ where: { id } })
+    const { tenantId, userId, name: userName } = (req.user as any)
+    logAudit({ tenantId, userId, userName, action: 'DELETE', entity: 'Listing', entityId: id, ip: req.ip }).catch(() => {})
     return reply.code(204).send()
   })
 }

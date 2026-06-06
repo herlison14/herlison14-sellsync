@@ -24,6 +24,7 @@ import { inAppNotificationsRoutes } from './routes/notifications.inapp'
 import { catalogRoutes } from './routes/catalog'
 import { suppliersRoutes } from './routes/suppliers'
 import { listingsRoutes } from './routes/listings'
+import { auditRoutes } from './routes/audit'
 import { startWorkers } from './workers'
 
 const app = Fastify({ logger: true })
@@ -55,6 +56,7 @@ async function bootstrap() {
   await app.register(catalogRoutes,             { prefix: '/catalog' })
   await app.register(suppliersRoutes,           { prefix: '/suppliers' })
   await app.register(listingsRoutes,            { prefix: '/listings' })
+  await app.register(auditRoutes,               { prefix: '/audit' })
 
   await startWorkers()
 

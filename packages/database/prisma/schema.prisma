@@ -29,6 +29,7 @@ model Tenant {
   notifications Notification[]
   suppliers     Supplier[]
   purchaseOrders PurchaseOrder[]
+  auditLogs     AuditLog[]
 
   @@map("tenants")
 }
@@ -622,4 +623,26 @@ model PushToken {
 
   @@unique([tenantId, token])
   @@map("push_tokens")
+}
+
+// ─── AUDIT LOG ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String?
+  userName   String?
+  action     String
+  entity     String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entity])
+  @@map("audit_logs")
 }
