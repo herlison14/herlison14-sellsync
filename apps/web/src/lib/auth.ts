@@ -13,6 +13,7 @@ interface Tenant {
   name: string
   slug: string
   plan: string
+  onboardingCompletedAt?: string | null
 }
 
 interface AuthState {

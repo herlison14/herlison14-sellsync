@@ -68,7 +68,17 @@ export async function authRoutes(app: FastifyInstance) {
   app.get('/me', async (req) => {
     await req.jwtVerify()
     const { userId } = req.user as { userId: string }
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, include: { tenant: { select: { id: true, name: true, slug: true, plan: true } } } })
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { tenant: { select: { id: true, name: true, slug: true, plan: true, onboardingCompletedAt: true } } },
+    })
     return user
+  })
+
+  app.post('/complete-onboarding', async (req, reply) => {
+    await req.jwtVerify()
+    const { tenantId } = req.user as { tenantId: string }
+    await prisma.tenant.update({ where: { id: tenantId }, data: { onboardingCompletedAt: new Date() } })
+    return reply.code(204).send()
   })
 }

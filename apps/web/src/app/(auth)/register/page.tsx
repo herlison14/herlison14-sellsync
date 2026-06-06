@@ -134,11 +134,8 @@ export default function RegisterPage() {
               <p className="text-sm text-muted-foreground">Agora conecte seus marketplaces e comece a vender.</p>
             </div>
             <div className="space-y-2">
-              <Button className="w-full" onClick={() => router.push('/dashboard/integrations')}>
-                Conectar marketplace →
-              </Button>
-              <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => router.push('/dashboard')}>
-                Ir para o dashboard
+              <Button className="w-full" onClick={() => router.push('/onboarding')}>
+                Configurar minha conta →
               </Button>
             </div>
           </div>
