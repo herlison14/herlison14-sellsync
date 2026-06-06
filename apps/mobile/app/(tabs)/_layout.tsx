@@ -9,12 +9,12 @@ export default function TabsLayout() {
         tabBarActiveTintColor: '#2563EB',
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarStyle: { borderTopColor: '#E5E7EB', paddingBottom: 4 },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
       }}
     >
       <Tabs.Screen
         name="dashboard"
-        options={{ title: 'Dashboard', tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} /> }}
+        options={{ title: 'Início', tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} /> }}
       />
       <Tabs.Screen
         name="orders"
@@ -25,13 +25,15 @@ export default function TabsLayout() {
         options={{ title: 'Estoque', tabBarIcon: ({ color, size }) => <Ionicons name="layers-outline" size={size} color={color} /> }}
       />
       <Tabs.Screen
-        name="products"
-        options={{ title: 'Produtos', tabBarIcon: ({ color, size }) => <Ionicons name="pricetag-outline" size={size} color={color} /> }}
+        name="notifications"
+        options={{ title: 'Alertas', tabBarIcon: ({ color, size }) => <Ionicons name="notifications-outline" size={size} color={color} /> }}
       />
       <Tabs.Screen
-        name="integrations"
-        options={{ title: 'Canais', tabBarIcon: ({ color, size }) => <Ionicons name="link-outline" size={size} color={color} /> }}
+        name="returns"
+        options={{ title: 'Devoluções', tabBarIcon: ({ color, size }) => <Ionicons name="return-down-back-outline" size={size} color={color} /> }}
       />
+      <Tabs.Screen name="products" options={{ href: null }} />
+      <Tabs.Screen name="integrations" options={{ href: null }} />
     </Tabs>
   )
 }
