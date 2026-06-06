@@ -9,6 +9,7 @@ import {
   getPriceHistory,
   getRepricingStats,
 } from '../services/repricing.service'
+import { requireRole } from '../lib/rbac'
 
 const ruleSchema = z.object({
   name:             z.string().min(1).max(100),
@@ -41,13 +42,13 @@ export async function repricingRoutes(app: FastifyInstance) {
     }
   })
 
-  app.delete('/rules/:id', auth, async (req) => {
+  app.delete('/rules/:id', { preHandler: [app.authenticate, requireRole('OWNER', 'ADMIN')] }, async (req) => {
     const { id } = req.params as { id: string }
     await deleteRepricingRule(req.user.tenantId, id)
     return { ok: true }
   })
 
-  app.post('/run', auth, async (req) => runRepricingForTenant(req.user.tenantId))
+  app.post('/run', { preHandler: [app.authenticate, requireRole('OWNER', 'ADMIN')] }, async (req) => runRepricingForTenant(req.user.tenantId))
 
   app.get('/stats', auth, async (req) => getRepricingStats(req.user.tenantId))
 

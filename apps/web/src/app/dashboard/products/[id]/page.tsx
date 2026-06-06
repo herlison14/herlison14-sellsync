@@ -11,11 +11,9 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { MP_EMOJI } from '@/lib/marketplace'
 
-const MP_EMOJI: Record<string, string> = {
-  MERCADO_LIVRE: '🟡', SHOPEE: '🟠', AMAZON: '🔵',
-  MAGALU: '🟢', AMERICANAS: '🔴', SHEIN: '⚫', TIKTOK_SHOP: '▶️',
-}
+
 
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>()

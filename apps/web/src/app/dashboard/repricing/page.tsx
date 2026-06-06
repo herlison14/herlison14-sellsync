@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { MP_EMOJI, MARKETPLACES } from '@/lib/marketplace'
+
 
 const STRATEGY_LABEL: Record<string, string> = {
   MAINTAIN_MARGIN: 'Manter margem',
@@ -25,12 +27,7 @@ const STRATEGY_DESCRIPTION: Record<string, string> = {
   FIXED_MARKUP:    'Aplica um markup fixo sobre o custo do produto.',
 }
 
-const MP_EMOJI: Record<string, string> = {
-  MERCADO_LIVRE: '🟡', SHOPEE: '🟠', AMAZON: '🔵',
-  MAGALU: '🟢', AMERICANAS: '🔴', SHEIN: '⚫', TIKTOK_SHOP: '▶️',
-}
 
-const MARKETPLACES = ['MERCADO_LIVRE', 'SHOPEE', 'AMAZON', 'MAGALU', 'AMERICANAS']
 const selectCls = 'flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
 const emptyForm = {

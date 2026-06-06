@@ -13,14 +13,12 @@ import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { MP_EMOJI } from '@/lib/marketplace'
+
 
 const PERIODS = [{ label: '7d', value: 7 }, { label: '30d', value: 30 }, { label: '90d', value: 90 }]
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-const MP_EMOJI: Record<string, string> = {
-  MERCADO_LIVRE: '🟡', SHOPEE: '🟠', AMAZON: '🔵',
-  MAGALU: '🟢', AMERICANAS: '🔴', SHEIN: '⚫', TIKTOK_SHOP: '▶️',
-}
 
 function ScorePill({ value, good, warn }: { value: number | null; good: number; warn: number }) {
   if (value == null) return <span className="text-muted-foreground text-xs">—</span>

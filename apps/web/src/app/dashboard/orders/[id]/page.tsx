@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { MP_EMOJI } from '@/lib/marketplace'
+
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warning' | 'destructive' | 'secondary' | 'info' }> = {
   PENDING:   { label: 'Pendente',   variant: 'warning' },
@@ -28,10 +30,6 @@ const NFE_CONFIG: Record<string, { label: string; color: string }> = {
   CANCELLED:  { label: 'NF-e cancelada',  color: 'text-muted-foreground' },
 }
 
-const MP_EMOJI: Record<string, string> = {
-  MERCADO_LIVRE: '🟡', SHOPEE: '🟠', AMAZON: '🔵',
-  MAGALU: '🟢', AMERICANAS: '🔴', SHEIN: '⚫', TIKTOK_SHOP: '▶️',
-}
 
 function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 

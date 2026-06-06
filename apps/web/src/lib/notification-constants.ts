@@ -30,6 +30,19 @@ export const TYPE_COLOR: Record<string, string> = {
   SYSTEM:            'text-muted-foreground bg-muted',
 }
 
+export const TYPE_LABEL: Record<string, string> = {
+  NEW_ORDER:         'Novo pedido',
+  ORDER_CANCELLED:   'Pedido cancelado',
+  LOW_STOCK:         'Estoque baixo',
+  STOCK_OUT:         'Sem estoque',
+  PRICE_CHANGED:     'Preço ajustado',
+  NF_E_ISSUED:       'NF-e emitida',
+  NF_E_ERROR:        'Erro NF-e',
+  RETURN_REQUESTED:  'Devolução',
+  INTEGRATION_ERROR: 'Erro de integração',
+  SYSTEM:            'Sistema',
+}
+
 export const ORDER_STATUS_COLOR: Record<string, string> = {
   PENDING:    'bg-amber-50 text-amber-700 border-amber-200',
   CONFIRMED:  'bg-blue-50 text-blue-700 border-blue-200',

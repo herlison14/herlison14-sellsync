@@ -5,44 +5,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import {
-  Bell, Package, TrendingDown, AlertTriangle, FileText,
-  RotateCcw, RefreshCw, Info, X, CheckCheck,
-} from 'lucide-react'
+import { Bell, Info, CheckCheck } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-
-const TYPE_ICON: Record<string, React.ElementType> = {
-  NEW_ORDER: Package, ORDER_CANCELLED: X, LOW_STOCK: TrendingDown,
-  STOCK_OUT: AlertTriangle, PRICE_CHANGED: RefreshCw, NF_E_ISSUED: FileText,
-  NF_E_ERROR: AlertTriangle, RETURN_REQUESTED: RotateCcw,
-  INTEGRATION_ERROR: AlertTriangle, SYSTEM: Info,
-}
-
-const TYPE_COLOR: Record<string, string> = {
-  NEW_ORDER: 'text-blue-600 bg-blue-50',
-  ORDER_CANCELLED: 'text-red-600 bg-red-50',
-  LOW_STOCK: 'text-amber-600 bg-amber-50',
-  STOCK_OUT: 'text-red-700 bg-red-100',
-  PRICE_CHANGED: 'text-emerald-600 bg-emerald-50',
-  NF_E_ISSUED: 'text-blue-600 bg-blue-50',
-  NF_E_ERROR: 'text-red-600 bg-red-50',
-  RETURN_REQUESTED: 'text-orange-600 bg-orange-50',
-  INTEGRATION_ERROR: 'text-red-600 bg-red-50',
-  SYSTEM: 'text-muted-foreground bg-muted',
-}
-
-const TYPE_LABEL: Record<string, string> = {
-  NEW_ORDER: 'Novo pedido', ORDER_CANCELLED: 'Pedido cancelado',
-  LOW_STOCK: 'Estoque baixo', STOCK_OUT: 'Sem estoque',
-  PRICE_CHANGED: 'Preço ajustado', NF_E_ISSUED: 'NF-e emitida',
-  NF_E_ERROR: 'Erro NF-e', RETURN_REQUESTED: 'Devolução',
-  INTEGRATION_ERROR: 'Erro de integração', SYSTEM: 'Sistema',
-}
+import { TYPE_ICON, TYPE_COLOR, TYPE_LABEL } from '@/lib/notification-constants'
 
 export default function NotificationsPage() {
   const qc = useQueryClient()

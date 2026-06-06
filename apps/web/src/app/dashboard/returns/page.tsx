@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { MP_EMOJI } from '@/lib/marketplace'
+
 
 const STATUS_CFG: Record<string, { label: string; variant: 'warning' | 'info' | 'success' | 'destructive' | 'secondary' }> = {
   REQUESTED:  { label: 'Solicitado',   variant: 'warning' },
@@ -34,10 +36,6 @@ const REASON_LABEL: Record<string, string> = {
   OTHER:              'Outro motivo',
 }
 
-const MP_EMOJI: Record<string, string> = {
-  MERCADO_LIVRE: '🟡', SHOPEE: '🟠', AMAZON: '🔵',
-  MAGALU: '🟢', AMERICANAS: '🔴', SHEIN: '⚫', TIKTOK_SHOP: '▶️',
-}
 
 const STATUS_FLOW = ['REQUESTED', 'APPROVED', 'IN_TRANSIT', 'RECEIVED', 'INSPECTING', 'REFUNDED']
 

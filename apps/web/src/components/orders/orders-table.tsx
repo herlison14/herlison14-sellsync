@@ -6,11 +6,9 @@ import { ptBR } from 'date-fns/locale'
 import { Package } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { MP_EMOJI } from '@/lib/marketplace'
 
-const MP_EMOJI: Record<string, string> = {
-  MERCADO_LIVRE: '🟡', SHOPEE: '🟠', AMAZON: '🔵',
-  MAGALU: '🟢', AMERICANAS: '🔴', SHEIN: '⚫', TIKTOK_SHOP: '▶️',
-}
+
 
 const STATUS_CFG: Record<string, { label: string; variant: 'warning' | 'info' | 'success' | 'destructive' | 'secondary' }> = {
   PENDING:       { label: 'Aguardando',     variant: 'warning' },

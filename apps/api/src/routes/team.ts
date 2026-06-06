@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { randomBytes, scrypt } from 'node:crypto'
 import { promisify } from 'node:util'
 import { sendPushNotification } from '../services/push.service'
+import { requireRole } from '../lib/rbac'
 
 const scryptAsync = promisify(scrypt)
 const ROLES = ['OWNER', 'ADMIN', 'OPERATOR'] as const
@@ -28,9 +29,8 @@ export async function teamRoutes(app: FastifyInstance) {
 
   // ─── Update member role ───────────────────────────────────────────────────
 
-  app.patch('/members/:id', { onRequest: [app.authenticate] }, async (req, reply) => {
-    const { tenantId, role: callerRole } = (req as any).user
-    if (!['OWNER', 'ADMIN'].includes(callerRole)) return reply.status(403).send({ error: 'Sem permissão' })
+  app.patch('/members/:id', { onRequest: [app.authenticate], preHandler: [requireRole('OWNER', 'ADMIN')] }, async (req, reply) => {
+    const { tenantId } = (req as any).user
 
     const { id } = req.params as { id: string }
     const { role } = z.object({ role: z.enum(ROLES) }).parse(req.body)
@@ -44,9 +44,8 @@ export async function teamRoutes(app: FastifyInstance) {
 
   // ─── Deactivate member ────────────────────────────────────────────────────
 
-  app.delete('/members/:id', { onRequest: [app.authenticate] }, async (req, reply) => {
-    const { tenantId, userId: callerId, role: callerRole } = (req as any).user
-    if (!['OWNER', 'ADMIN'].includes(callerRole)) return reply.status(403).send({ error: 'Sem permissão' })
+  app.delete('/members/:id', { onRequest: [app.authenticate], preHandler: [requireRole('OWNER', 'ADMIN')] }, async (req, reply) => {
+    const { tenantId, userId: callerId } = (req as any).user
 
     const { id } = req.params as { id: string }
     if (id === callerId) return reply.status(400).send({ error: 'Não é possível remover a si mesmo' })

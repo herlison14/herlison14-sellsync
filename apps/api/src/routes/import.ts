@@ -10,23 +10,21 @@ export async function importRoutes(app: FastifyInstance) {
     const data = await req.file()
     if (!data) return reply.status(400).send({ error: 'Nenhum arquivo enviado' })
 
-    const allowed = [
-      'text/csv',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/octet-stream',
-    ]
-    if (!allowed.includes(data.mimetype) && !data.filename.match(/\.(csv|xls|xlsx)$/i)) {
-      return reply.status(400).send({ error: 'Formato inválido. Use CSV ou XLSX.' })
-    }
-
     const chunks: Buffer[] = []
     for await (const chunk of data.file) chunks.push(chunk as Buffer)
     const buffer = Buffer.concat(chunks)
 
+    // Magic-bytes check: CSV (text) or XLSX (PK zip header 50 4B 03 04)
+    const magic4 = buffer.slice(0, 4)
+    const isXlsx = magic4.equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))
+    const isCsv = data.mimetype === 'text/csv' || data.filename.match(/\.csv$/i)
+    if (!isXlsx && !isCsv) {
+      return reply.status(400).send({ error: 'Formato inválido. Use CSV ou XLSX.' })
+    }
+
     let rows
     try {
-      rows = parseSpreadsheet(buffer, data.mimetype)
+      rows = await parseSpreadsheet(buffer, data.mimetype)
     } catch {
       return reply.status(400).send({ error: 'Não foi possível ler o arquivo. Verifique o formato.' })
     }
@@ -53,7 +51,7 @@ export async function importRoutes(app: FastifyInstance) {
 
     let rows
     try {
-      rows = parseSpreadsheet(buffer, data.mimetype)
+      rows = await parseSpreadsheet(buffer, data.mimetype)
     } catch {
       return reply.status(400).send({ error: 'Não foi possível ler o arquivo.' })
     }

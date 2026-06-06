@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { prisma } from '@sellsync/database'
-import { subDays, startOfDay, endOfDay } from 'date-fns'
+import { subDays, startOfDay } from 'date-fns'
 
 function toCsv(rows: Record<string, unknown>[]): string {
   if (rows.length === 0) return ''
@@ -14,11 +14,15 @@ function toCsv(rows: Record<string, unknown>[]): string {
   return [headers.join(','), ...rows.map((r) => headers.map((h) => escape(r[h])).join(','))].join('\n')
 }
 
-function toXlsx(rows: Record<string, unknown>[], sheetName = 'Dados'): Buffer {
-  const ws = XLSX.utils.json_to_sheet(rows)
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, sheetName)
-  return Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }))
+async function toXlsx(rows: Record<string, unknown>[], sheetName = 'Dados'): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet(sheetName)
+  if (rows.length > 0) {
+    ws.columns = Object.keys(rows[0]).map((key) => ({ header: key, key, width: 20 }))
+    ws.addRows(rows)
+    ws.getRow(1).font = { bold: true }
+  }
+  return Buffer.from(await wb.xlsx.writeBuffer())
 }
 
 function sendFile(reply: any, data: Buffer | string, filename: string, format: string) {
@@ -63,7 +67,7 @@ export async function exportRoutes(app: FastifyInstance) {
     }))
 
     const fname = `pedidos_${new Date().toISOString().slice(0, 10)}`
-    const data = format === 'xlsx' ? toXlsx(rows, 'Pedidos') : Buffer.from(toCsv(rows))
+    const data = format === 'xlsx' ? await toXlsx(rows, 'Pedidos') : Buffer.from(toCsv(rows))
     return sendFile(reply, data, `${fname}.${format}`, format)
   })
 
@@ -94,7 +98,7 @@ export async function exportRoutes(app: FastifyInstance) {
     }))
 
     const fname = `estoque_${new Date().toISOString().slice(0, 10)}`
-    const data = format === 'xlsx' ? toXlsx(rows, 'Estoque') : Buffer.from(toCsv(rows))
+    const data = format === 'xlsx' ? await toXlsx(rows, 'Estoque') : Buffer.from(toCsv(rows))
     return sendFile(reply, data, `${fname}.${format}`, format)
   })
 
@@ -124,7 +128,7 @@ export async function exportRoutes(app: FastifyInstance) {
     }))
 
     const fname = `produtos_${new Date().toISOString().slice(0, 10)}`
-    const data = format === 'xlsx' ? toXlsx(rows, 'Produtos') : Buffer.from(toCsv(rows))
+    const data = format === 'xlsx' ? await toXlsx(rows, 'Produtos') : Buffer.from(toCsv(rows))
     return sendFile(reply, data, `${fname}.${format}`, format)
   })
 
@@ -149,7 +153,7 @@ export async function exportRoutes(app: FastifyInstance) {
     }))
 
     const fname = `financeiro_${new Date().toISOString().slice(0, 10)}`
-    const data = format === 'xlsx' ? toXlsx(rows, 'Financeiro') : Buffer.from(toCsv(rows))
+    const data = format === 'xlsx' ? await toXlsx(rows, 'Financeiro') : Buffer.from(toCsv(rows))
     return sendFile(reply, data, `${fname}.${format}`, format)
   })
 }

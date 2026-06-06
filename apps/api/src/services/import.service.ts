@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { prisma } from '@sellsync/database'
 
 export interface ImportRow {
@@ -28,12 +28,38 @@ function toNum(v: unknown): number | undefined {
   return isNaN(n) || v === '' || v == null ? undefined : n
 }
 
-export function parseSpreadsheet(buffer: Buffer, mimetype: string): ImportRow[] {
-  const workbook = XLSX.read(buffer, { type: 'buffer' })
-  const sheet = workbook.Sheets[workbook.SheetNames[0]]
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' })
+export async function parseSpreadsheet(buffer: Buffer, mimetype: string): Promise<ImportRow[]> {
+  let rawRows: Record<string, unknown>[]
 
-  return rows.map((row) => ({
+  if (mimetype === 'text/csv' || (mimetype === 'application/octet-stream' && !buffer.slice(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04])))) {
+    // CSV: split lines
+    const text = buffer.toString('utf8')
+    const lines = text.split(/\r?\n/).filter(Boolean)
+    const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''))
+    rawRows = lines.slice(1).map((line) => {
+      const vals = line.split(',').map((v) => v.trim().replace(/^"|"$/g, ''))
+      return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? '']))
+    })
+  } else {
+    // XLSX: magic bytes 50 4B 03 04 (ZIP/Office Open XML)
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(buffer)
+    const ws = wb.worksheets[0]
+    if (!ws) return []
+    const headers: string[] = []
+    ws.getRow(1).eachCell((cell) => headers.push(String(cell.value ?? '')))
+    rawRows = []
+    ws.eachRow((row, rowNum) => {
+      if (rowNum === 1) return
+      const obj: Record<string, unknown> = {}
+      row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+        obj[headers[colNum - 1] ?? colNum] = cell.value ?? ''
+      })
+      rawRows.push(obj)
+    })
+  }
+
+  return rawRows.map((row) => ({
     sku: String(row['sku'] ?? row['SKU'] ?? '').trim(),
     name: String(row['name'] ?? row['nome'] ?? row['Nome'] ?? '').trim(),
     description: String(row['description'] ?? row['descricao'] ?? row['descrição'] ?? '').trim() || undefined,
