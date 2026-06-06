@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 export default function AcceptInvitePage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { login } = useAuth()
+  const { hydrate } = useAuth()
   const token = searchParams.get('token') ?? ''
 
   const [form, setForm] = useState({ name: '', password: '', confirm: '' })
@@ -30,7 +30,9 @@ export default function AcceptInvitePage() {
         name: form.name.trim(),
         password: form.password,
       })
-      login(res.data.token)
+      localStorage.setItem('sellsync:token', res.data.token)
+      useAuth.setState({ token: res.data.token, user: res.data.user, isAuthenticated: true })
+      await hydrate()
       router.replace('/dashboard')
     } catch (err: any) {
       setError(err?.response?.data?.error ?? 'Convite inválido ou expirado')

@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function InventoryPage() {
   const { data: stock, isLoading } = useInventory()
-  const lowStock = stock?.filter((s) => s.quantity - s.reserved <= s.minAlert) ?? []
+  const lowStock = stock?.filter((s: any) => s.quantity - s.reserved <= s.minAlert) ?? []
 
   return (
     <div className="flex flex-col gap-5 p-6 animate-fade-in">

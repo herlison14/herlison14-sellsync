@@ -217,7 +217,6 @@ export default function ListingsPage() {
                   <Megaphone className="h-10 w-10 mx-auto text-muted-foreground/20 mb-3" />
                   <p className="text-sm font-semibold text-muted-foreground">Nenhum anúncio encontrado</p>
                   <p className="text-xs text-muted-foreground/60 mt-1">Publique produtos nos seus canais para vê-los aqui</p>
-                </p>
                 </td>
               </tr>
             )}
