@@ -3,6 +3,7 @@ import { Sidebar } from '@/components/ui/sidebar'
 import { QueryProvider } from '@/components/ui/query-provider'
 import { NotificationBell } from '@/components/ui/notification-bell'
 import { OnboardingBanner } from '@/components/ui/onboarding-banner'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -14,7 +15,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <NotificationBell />
           </header>
           <OnboardingBanner />
-          <main className="flex-1 overflow-y-auto">{children}</main>
+          <main className="flex-1 overflow-y-auto">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </main>
         </div>
       </div>
     </QueryProvider>

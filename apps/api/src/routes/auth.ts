@@ -1,10 +1,24 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '@sellsync/database'
 import { z } from 'zod'
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto'
+import { promisify } from 'node:util'
 
-function hashPassword(password: string, salt: string) {
-  return createHash('sha256').update(`${password}:${salt}`).digest('hex')
+const scryptAsync = promisify(scrypt)
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex')
+  const hash = (await scryptAsync(password, salt, 64)) as Buffer
+  return `${hash.toString('hex')}:${salt}`
+}
+
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [hashHex, salt] = stored.split(':')
+  if (!hashHex || !salt) return false
+  const hash = (await scryptAsync(password, salt, 64)) as Buffer
+  const storedHash = Buffer.from(hashHex, 'hex')
+  if (hash.length !== storedHash.length) return false
+  return timingSafeEqual(hash, storedHash)
 }
 
 const registerSchema = z.object({
@@ -20,7 +34,7 @@ const loginSchema = z.object({
 })
 
 export async function authRoutes(app: FastifyInstance) {
-  app.post('/register', async (req, reply) => {
+  app.post('/register', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
     const body = registerSchema.parse(req.body)
 
     const slug = body.tenantName
@@ -30,8 +44,10 @@ export async function authRoutes(app: FastifyInstance) {
       .replace(/[^a-z0-9]+/g, '-')
       .slice(0, 50)
 
-    const salt = randomBytes(16).toString('hex')
-    const passwordHash = hashPassword(body.password, salt)
+    const existingUser = await prisma.user.findUnique({ where: { email: body.email } })
+    if (existingUser) return reply.code(409).send({ message: 'E-mail já cadastrado' })
+
+    const passwordHash = await hashPassword(body.password)
 
     const tenant = await prisma.tenant.create({
       data: {
@@ -42,7 +58,7 @@ export async function authRoutes(app: FastifyInstance) {
             email: body.email,
             name: body.name,
             role: 'OWNER',
-            // Store hash:salt in name field as workaround — production should use a proper users table with auth
+            passwordHash,
           },
         },
       },
@@ -55,11 +71,15 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(201).send({ token, user: { id: user.id, name: user.name, email: user.email }, tenant: { id: tenant.id, slug: tenant.slug } })
   })
 
-  app.post('/login', async (req, reply) => {
+  app.post('/login', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
     const body = loginSchema.parse(req.body)
 
     const user = await prisma.user.findUnique({ where: { email: body.email }, include: { tenant: true } })
-    if (!user) return reply.code(401).send({ message: 'Credenciais inválidas' })
+    // Same message for not-found and wrong-password — prevents email enumeration
+    if (!user || !user.passwordHash) return reply.code(401).send({ message: 'Credenciais inválidas' })
+
+    const valid = await verifyPassword(body.password, user.passwordHash)
+    if (!valid) return reply.code(401).send({ message: 'Credenciais inválidas' })
 
     if (user.twoFactorEnabled) {
       const tempToken = app.jwt.sign({ userId: user.id, tenantId: user.tenantId, role: user.role, pending2fa: true }, { expiresIn: '5m' })
@@ -78,6 +98,13 @@ export async function authRoutes(app: FastifyInstance) {
       include: { tenant: { select: { id: true, name: true, slug: true, plan: true, onboardingCompletedAt: true } } },
     })
     return user
+  })
+
+  // Logout — frontend deletes the token; no server-side blacklist yet.
+  // Future: store token JTI in Redis with TTL = remaining expiry.
+  app.post('/logout', async (req, reply) => {
+    await req.jwtVerify()
+    return reply.code(204).send()
   })
 
   app.post('/complete-onboarding', async (req, reply) => {

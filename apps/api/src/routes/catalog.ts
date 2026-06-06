@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { z } from 'zod'
 import {
   detectCatalogDrift, syncListing, bulkSyncListings,
   getCatalogStats, getListingsWithProducts,
@@ -24,15 +25,18 @@ export async function catalogRoutes(app: FastifyInstance) {
   })
 
   app.post('/sync/:listingId', auth, async (req, reply) => {
+    const { listingId } = req.params as { listingId: string }
     try {
-      return await syncListing(req.user.tenantId, (req.params as any).listingId)
+      return await syncListing(req.user.tenantId, listingId)
     } catch (err: any) {
       return reply.status(404).send({ error: err.message })
     }
   })
 
   app.post('/sync-bulk', auth, async (req) => {
-    const { listingIds } = req.body as { listingIds: string[] }
+    const { listingIds } = z.object({
+      listingIds: z.array(z.string().uuid()).min(1).max(100),
+    }).parse(req.body)
     return bulkSyncListings(req.user.tenantId, listingIds)
   })
 }

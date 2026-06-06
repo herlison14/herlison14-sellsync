@@ -140,7 +140,7 @@ function StepStock({ onNext, onSkip }: { onNext: () => void; onSkip: () => void 
 
   const save = useMutation({
     mutationFn: async () => {
-      await api.post('/inventory/warehouses', { name: warehouseName })
+      await api.post('/inventory/warehouses', { name: warehouseName, minStock: Number(threshold) })
     },
     onSuccess: onNext,
     onError: onNext,

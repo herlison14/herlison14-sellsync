@@ -3,6 +3,16 @@ import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
+import helmet from '@fastify/helmet'
+
+// Fail fast on misconfigured secrets — prevents predictable defaults reaching production
+const REQUIRED_SECRETS = ['JWT_SECRET', 'DATABASE_URL'] as const
+for (const key of REQUIRED_SECRETS) {
+  if (!process.env[key]) throw new Error(`Missing required env var: ${key}`)
+}
+if (process.env.JWT_SECRET === 'change-me-in-production') {
+  throw new Error('JWT_SECRET must be changed from the default example value')
+}
 import { ordersRoutes } from './routes/orders'
 import { inventoryRoutes } from './routes/inventory'
 import { productsRoutes } from './routes/products'
@@ -34,10 +44,37 @@ import { startWorkers } from './workers'
 const app = Fastify({ logger: true })
 
 async function bootstrap() {
-  await app.register(cors, { origin: process.env.WEB_URL ?? '*' })
+  // Security headers — must be registered before routes
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  })
+
+  const allowedOrigin = process.env.WEB_URL
+  if (!allowedOrigin) app.log.warn('WEB_URL not set — CORS is open to all origins (dev only)')
+  await app.register(cors, { origin: allowedOrigin ?? '*' })
   await app.register(jwt, { secret: process.env.JWT_SECRET! })
   await app.register(rateLimit, { max: 200, timeWindow: '1 minute' })
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } }) // 10 MB
+
+  // Shared auth decorator — all routes using app.authenticate go through this
+  app.decorate('authenticate', async function (req: any, reply: any) {
+    try {
+      await req.jwtVerify()
+    } catch (err) {
+      reply.send(err)
+    }
+  })
 
   await app.register(authRoutes,         { prefix: '/auth' })
   await app.register(ordersRoutes,       { prefix: '/orders' })
@@ -65,6 +102,9 @@ async function bootstrap() {
   await app.register(emailSettingsRoutes,       { prefix: '/email-settings' })
   await app.register(customersRoutes,           { prefix: '/customers' })
   await app.register(twoFactorRoutes,           { prefix: '/2fa' })
+
+  // Health probe for load balancers / Kubernetes
+  app.get('/healthz', async () => ({ status: 'ok', uptime: process.uptime() }))
 
   await startWorkers()
 

@@ -1,13 +1,17 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '@sellsync/database'
 import { z } from 'zod'
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes, scrypt } from 'node:crypto'
+import { promisify } from 'node:util'
 import { sendPushNotification } from '../services/push.service'
 
+const scryptAsync = promisify(scrypt)
 const ROLES = ['OWNER', 'ADMIN', 'OPERATOR'] as const
 
-function hashPassword(password: string, salt: string) {
-  return createHash('sha256').update(`${password}:${salt}`).digest('hex')
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex')
+  const hash = (await scryptAsync(password, salt, 64)) as Buffer
+  return `${hash.toString('hex')}:${salt}`
 }
 
 export async function teamRoutes(app: FastifyInstance) {
@@ -136,8 +140,7 @@ export async function teamRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Convite expirado' })
     }
 
-    const salt = randomBytes(16).toString('hex')
-    const passwordHash = `${hashPassword(password, salt)}:${salt}`
+    const passwordHash = await hashPassword(password)
 
     const user = await prisma.user.create({
       data: {
