@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { TrendingUp, ShoppingCart, Receipt, XCircle } from 'lucide-react'
+import { TrendingUp, ShoppingCart, Receipt, XCircle, Download } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -46,13 +46,36 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Relatórios</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Análise de performance do período</p>
         </div>
-        <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
-          {PERIODS.map((p) => (
-            <button key={p.value} onClick={() => setDays(p.value)}
-              className={cn('rounded-md px-3 py-1 text-xs font-semibold transition-all', days === p.value ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
-              {p.label}
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+            {PERIODS.map((p) => (
+              <button key={p.value} onClick={() => setDays(p.value)}
+                className={cn('rounded-md px-3 py-1 text-xs font-semibold transition-all', days === p.value ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="relative group">
+            <button className="flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-accent transition-colors">
+              <Download className="h-3.5 w-3.5" /> Exportar
             </button>
-          ))}
+            <div className="absolute right-0 top-full mt-1 z-10 hidden group-hover:block w-52 rounded-xl border bg-card shadow-lg p-1.5">
+              {[
+                { label: 'Pedidos (CSV)', href: `/export/orders?days=${days}&format=csv` },
+                { label: 'Pedidos (XLSX)', href: `/export/orders?days=${days}&format=xlsx` },
+                { label: 'Estoque (CSV)', href: '/export/inventory?format=csv' },
+                { label: 'Produtos (XLSX)', href: '/export/products?format=xlsx' },
+                { label: 'Financeiro (CSV)', href: `/export/financial?days=${days}&format=csv` },
+              ].map((item) => (
+                <a key={item.href}
+                  href={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}${item.href}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs hover:bg-muted/50 transition-colors">
+                  <Download className="h-3 w-3 text-muted-foreground" /> {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

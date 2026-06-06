@@ -1,0 +1,155 @@
+import type { FastifyInstance } from 'fastify'
+import { z } from 'zod'
+import * as XLSX from 'xlsx'
+import { prisma } from '@sellsync/database'
+import { subDays, startOfDay, endOfDay } from 'date-fns'
+
+function toCsv(rows: Record<string, unknown>[]): string {
+  if (rows.length === 0) return ''
+  const headers = Object.keys(rows[0])
+  const escape = (v: unknown) => {
+    const s = String(v ?? '')
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  return [headers.join(','), ...rows.map((r) => headers.map((h) => escape(r[h])).join(','))].join('\n')
+}
+
+function toXlsx(rows: Record<string, unknown>[], sheetName = 'Dados'): Buffer {
+  const ws = XLSX.utils.json_to_sheet(rows)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, sheetName)
+  return Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }))
+}
+
+function sendFile(reply: any, data: Buffer | string, filename: string, format: string) {
+  const isXlsx = format === 'xlsx'
+  reply.header('Content-Disposition', `attachment; filename="${filename}"`)
+  reply.header('Content-Type', isXlsx
+    ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    : 'text/csv; charset=utf-8')
+  return reply.send(isXlsx ? data : '﻿' + data)
+}
+
+const periodSchema = z.object({
+  days: z.coerce.number().min(1).max(365).default(30),
+  format: z.enum(['csv', 'xlsx']).default('csv'),
+})
+
+export async function exportRoutes(app: FastifyInstance) {
+  app.addHook('onRequest', async (req) => { await req.jwtVerify() })
+
+  // GET /export/orders
+  app.get('/orders', async (req, reply) => {
+    const { tenantId } = req.user as { tenantId: string }
+    const { days, format } = periodSchema.parse(req.query)
+    const from = startOfDay(subDays(new Date(), days - 1))
+
+    const orders = await prisma.order.findMany({
+      where: { tenantId, createdAt: { gte: from } },
+      include: { store: { select: { name: true, marketplace: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    const rows = orders.map((o) => ({
+      'ID Externo': o.externalId,
+      'Canal': o.store.marketplace,
+      'Loja': o.store.name,
+      'Comprador': o.buyerName,
+      'Status': o.status,
+      'Total (R$)': Number(o.total).toFixed(2),
+      'Frete (R$)': Number(o.shippingCost).toFixed(2),
+      'NF-e Status': o.nfeStatus,
+      'Criado em': new Date(o.createdAt).toLocaleString('pt-BR'),
+    }))
+
+    const fname = `pedidos_${new Date().toISOString().slice(0, 10)}`
+    const data = format === 'xlsx' ? toXlsx(rows, 'Pedidos') : Buffer.from(toCsv(rows))
+    return sendFile(reply, data, `${fname}.${format}`, format)
+  })
+
+  // GET /export/inventory
+  app.get('/inventory', async (req, reply) => {
+    const { tenantId } = req.user as { tenantId: string }
+    const { format } = periodSchema.parse(req.query)
+
+    const items = await prisma.stockItem.findMany({
+      where: { tenantId },
+      include: {
+        product: { select: { name: true, sku: true, brand: true, ncm: true } },
+        warehouse: { select: { name: true } },
+      },
+      orderBy: [{ product: { name: 'asc' } }],
+    })
+
+    const rows = items.map((i) => ({
+      'SKU': i.product.sku,
+      'Produto': i.product.name,
+      'Marca': i.product.brand ?? '',
+      'NCM': i.product.ncm ?? '',
+      'Armazém': i.warehouse.name,
+      'Quantidade': i.quantity,
+      'Reservado': i.reserved,
+      'Disponível': i.quantity - i.reserved,
+      'Mínimo': i.minStock ?? '',
+    }))
+
+    const fname = `estoque_${new Date().toISOString().slice(0, 10)}`
+    const data = format === 'xlsx' ? toXlsx(rows, 'Estoque') : Buffer.from(toCsv(rows))
+    return sendFile(reply, data, `${fname}.${format}`, format)
+  })
+
+  // GET /export/products
+  app.get('/products', async (req, reply) => {
+    const { tenantId } = req.user as { tenantId: string }
+    const { format } = periodSchema.parse(req.query)
+
+    const products = await prisma.product.findMany({
+      where: { tenantId },
+      include: {
+        stockItems: true,
+        _count: { select: { listings: true } },
+      },
+      orderBy: { name: 'asc' },
+    })
+
+    const rows = products.map((p) => ({
+      'SKU': p.sku,
+      'Nome': p.name,
+      'Marca': p.brand ?? '',
+      'NCM': p.ncm ?? '',
+      'GTIN/EAN': p.gtin ?? '',
+      'Peso (kg)': p.weight ?? '',
+      'Anúncios ativos': p._count.listings,
+      'Estoque total': p.stockItems.reduce((s, i) => s + i.quantity, 0),
+    }))
+
+    const fname = `produtos_${new Date().toISOString().slice(0, 10)}`
+    const data = format === 'xlsx' ? toXlsx(rows, 'Produtos') : Buffer.from(toCsv(rows))
+    return sendFile(reply, data, `${fname}.${format}`, format)
+  })
+
+  // GET /export/financial
+  app.get('/financial', async (req, reply) => {
+    const { tenantId } = req.user as { tenantId: string }
+    const { days, format } = periodSchema.parse(req.query)
+    const from = startOfDay(subDays(new Date(), days - 1))
+
+    const txs = await prisma.financialTransaction.findMany({
+      where: { tenantId, createdAt: { gte: from } },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    const rows = txs.map((t) => ({
+      'Tipo': t.type,
+      'Descrição': t.description,
+      'Valor (R$)': Number(t.amount).toFixed(2),
+      'Canal': t.marketplace ?? '',
+      'Referência': t.referenceId ?? '',
+      'Data': new Date(t.createdAt).toLocaleString('pt-BR'),
+    }))
+
+    const fname = `financeiro_${new Date().toISOString().slice(0, 10)}`
+    const data = format === 'xlsx' ? toXlsx(rows, 'Financeiro') : Buffer.from(toCsv(rows))
+    return sendFile(reply, data, `${fname}.${format}`, format)
+  })
+}

@@ -25,6 +25,7 @@ import { catalogRoutes } from './routes/catalog'
 import { suppliersRoutes } from './routes/suppliers'
 import { listingsRoutes } from './routes/listings'
 import { auditRoutes } from './routes/audit'
+import { exportRoutes } from './routes/export'
 import { startWorkers } from './workers'
 
 const app = Fastify({ logger: true })
@@ -57,6 +58,7 @@ async function bootstrap() {
   await app.register(suppliersRoutes,           { prefix: '/suppliers' })
   await app.register(listingsRoutes,            { prefix: '/listings' })
   await app.register(auditRoutes,               { prefix: '/audit' })
+  await app.register(exportRoutes,              { prefix: '/export' })
 
   await startWorkers()
 
