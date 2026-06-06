@@ -25,6 +25,7 @@ model Tenant {
   orders       Order[]
   warehouses   Warehouse[]
   nfeSettings   NfeSettings?
+  emailSettings EmailSettings?
   returns       Return[]
   notifications Notification[]
   suppliers     Supplier[]
@@ -343,6 +344,27 @@ model NfeSettings {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("nfe_settings")
+}
+
+model EmailSettings {
+  id          String  @id @default(cuid())
+  tenantId    String  @unique
+  provider    String  @default("smtp")
+  smtpHost    String?
+  smtpPort    Int?
+  smtpUser    String?
+  smtpPass    String?
+  fromName    String?
+  fromEmail   String?
+  resendApiKey String?
+  notifyLowStock    Boolean @default(true)
+  notifyNewOrder    Boolean @default(false)
+  notifyNfeError    Boolean @default(true)
+  notifyReturn      Boolean @default(true)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("email_settings")
 }
 
 // ─── PRECIFICAÇÃO ─────────────────────────────────────────────────────────────
