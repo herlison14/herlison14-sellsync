@@ -28,6 +28,7 @@ import { auditRoutes } from './routes/audit'
 import { exportRoutes } from './routes/export'
 import { emailSettingsRoutes } from './routes/email-settings'
 import { customersRoutes } from './routes/customers'
+import { twoFactorRoutes } from './routes/two-factor'
 import { startWorkers } from './workers'
 
 const app = Fastify({ logger: true })
@@ -63,6 +64,7 @@ async function bootstrap() {
   await app.register(exportRoutes,              { prefix: '/export' })
   await app.register(emailSettingsRoutes,       { prefix: '/email-settings' })
   await app.register(customersRoutes,           { prefix: '/customers' })
+  await app.register(twoFactorRoutes,           { prefix: '/2fa' })
 
   await startWorkers()
 

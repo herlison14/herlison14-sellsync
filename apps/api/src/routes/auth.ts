@@ -61,6 +61,11 @@ export async function authRoutes(app: FastifyInstance) {
     const user = await prisma.user.findUnique({ where: { email: body.email }, include: { tenant: true } })
     if (!user) return reply.code(401).send({ message: 'Credenciais inválidas' })
 
+    if (user.twoFactorEnabled) {
+      const tempToken = app.jwt.sign({ userId: user.id, tenantId: user.tenantId, role: user.role, pending2fa: true }, { expiresIn: '5m' })
+      return { requires2fa: true, tempToken }
+    }
+
     const token = app.jwt.sign({ userId: user.id, tenantId: user.tenantId, role: user.role }, { expiresIn: '7d' })
     return { token, user: { id: user.id, name: user.name, email: user.email }, tenant: { id: user.tenantId, slug: user.tenant.slug } }
   })

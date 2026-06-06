@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'next/navigation'
-import { CheckCircle, AlertTriangle } from 'lucide-react'
+import { CheckCircle, AlertTriangle, ShieldCheck, ShieldOff, Mail, Send } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
-const TABS = ['Empresa', 'Fiscal (NF-e)', 'Armazéns', 'Equipe', 'Plano'] as const
+const TABS = ['Empresa', 'Fiscal (NF-e)', 'Armazéns', 'Equipe', 'Segurança', 'E-mail', 'Plano'] as const
 type Tab = typeof TABS[number]
 
 export default function SettingsPage() {
@@ -47,6 +47,8 @@ export default function SettingsPage() {
       {tab === 'Fiscal (NF-e)' && <NfeTab />}
       {tab === 'Armazéns' && <WarehousesTab />}
       {tab === 'Equipe' && <TeamTab />}
+      {tab === 'Segurança' && <SecurityTab />}
+      {tab === 'E-mail' && <EmailTab />}
       {tab === 'Plano' && <PlanTab />}
     </div>
   )
@@ -206,6 +208,214 @@ function TeamTab() {
         <p className="text-sm text-muted-foreground">Convite de membros disponível no plano Starter e acima.</p>
       </CardContent>
     </Card>
+  )
+}
+
+function SecurityTab() {
+  const qc = useQueryClient()
+  const [step, setStep] = useState<'idle' | 'setup' | 'disable'>('idle')
+  const [code, setCode] = useState('')
+  const [qrData, setQrData] = useState<{ secret: string; qrCodeUrl: string } | null>(null)
+  const [msg, setMsg] = useState('')
+
+  const { data: status } = useQuery({
+    queryKey: ['2fa-status'],
+    queryFn: async () => (await api.get('/2fa/status')).data,
+  })
+
+  const setup = useMutation({
+    mutationFn: async () => (await api.post('/2fa/setup')).data,
+    onSuccess: (d) => { setQrData(d); setStep('setup') },
+  })
+
+  const enable = useMutation({
+    mutationFn: async () => (await api.post('/2fa/enable', { token: code })).data,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['2fa-status'] }); setStep('idle'); setMsg('2FA ativado com sucesso!'); setCode('') },
+    onError: () => setMsg('Código inválido. Tente novamente.'),
+  })
+
+  const disable = useMutation({
+    mutationFn: async () => (await api.post('/2fa/disable', { token: code })).data,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['2fa-status'] }); setStep('idle'); setMsg('2FA desativado.'); setCode('') },
+    onError: () => setMsg('Código inválido.'),
+  })
+
+  const enabled = status?.enabled
+
+  return (
+    <div className="max-w-lg space-y-5">
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', enabled ? 'bg-emerald-100' : 'bg-muted')}>
+                {enabled ? <ShieldCheck className="h-5 w-5 text-emerald-600" /> : <ShieldOff className="h-5 w-5 text-muted-foreground" />}
+              </div>
+              <div>
+                <p className="font-semibold text-sm">Autenticação em 2 fatores (TOTP)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {enabled ? 'Ativo — sua conta está protegida' : 'Inativo — recomendamos ativar para maior segurança'}
+                </p>
+              </div>
+            </div>
+            <Badge variant={enabled ? 'success' : 'secondary'} className="shrink-0 text-xs">
+              {enabled ? 'Ativo' : 'Inativo'}
+            </Badge>
+          </div>
+
+          {msg && (
+            <div className={cn('mt-3 rounded-lg px-3 py-2 text-sm', msg.includes('sucesso') || msg.includes('Ativo') ? 'bg-emerald-50 text-emerald-700' : 'bg-destructive/10 text-destructive')}>
+              {msg}
+            </div>
+          )}
+
+          {step === 'idle' && (
+            <div className="mt-4">
+              {!enabled ? (
+                <Button size="sm" onClick={() => { setMsg(''); setup.mutate() }} disabled={setup.isPending}>
+                  <ShieldCheck className="h-3.5 w-3.5" /> Ativar 2FA
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => { setMsg(''); setStep('disable') }}>
+                  <ShieldOff className="h-3.5 w-3.5" /> Desativar 2FA
+                </Button>
+              )}
+            </div>
+          )}
+
+          {step === 'setup' && qrData && (
+            <div className="mt-4 space-y-4">
+              <p className="text-sm text-muted-foreground">Escaneie o QR code com Google Authenticator, Authy ou similar:</p>
+              <div className="flex items-center gap-4">
+                <img src={qrData.qrCodeUrl} alt="QR Code 2FA" className="h-40 w-40 rounded-lg border" />
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Chave manual:</p>
+                  <code className="text-xs bg-muted rounded px-2 py-1 break-all">{qrData.secret}</code>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Código de verificação</label>
+                <Input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000" maxLength={6} className="mt-1 font-mono tracking-widest w-36" autoFocus />
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => enable.mutate()} disabled={code.length !== 6 || enable.isPending}>
+                  {enable.isPending ? 'Verificando...' : 'Confirmar'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => { setStep('idle'); setCode('') }}>Cancelar</Button>
+              </div>
+            </div>
+          )}
+
+          {step === 'disable' && (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-muted-foreground">Digite o código atual do seu autenticador para confirmar:</p>
+              <Input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000000" maxLength={6} className="font-mono tracking-widest w-36" autoFocus />
+              <div className="flex gap-2">
+                <Button variant="destructive" size="sm" onClick={() => disable.mutate()} disabled={code.length !== 6 || disable.isPending}>
+                  {disable.isPending ? 'Desativando...' : 'Desativar'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => { setStep('idle'); setCode('') }}>Cancelar</Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function EmailTab() {
+  const qc = useQueryClient()
+  const { data: settings } = useQuery({
+    queryKey: ['email-settings'],
+    queryFn: async () => (await api.get('/email-settings')).data,
+  })
+
+  const [form, setForm] = useState({
+    provider: 'smtp', fromName: '', fromEmail: '', resendApiKey: '',
+    notifyLowStock: true, notifyNfeError: true, notifyReturn: true, notifyNewOrder: false,
+  })
+
+  const save = useMutation({
+    mutationFn: async () => api.put('/email-settings', form),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['email-settings'] }),
+  })
+
+  const test = useMutation({
+    mutationFn: async () => api.post('/email-settings/test'),
+  })
+
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  const toggle = (k: string) => setForm((f) => ({ ...f, [k]: !(f as any)[k] }))
+
+  return (
+    <div className="max-w-lg space-y-5">
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Mail className="h-4 w-4" /> Configuração de envio</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Provedor</label>
+            <select value={form.provider} onChange={set('provider')}
+              className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+              <option value="smtp">SMTP (servidor próprio)</option>
+              <option value="resend">Resend (API Key)</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Nome do remetente</label>
+              <Input value={form.fromName} onChange={set('fromName')} placeholder="SellSync" className="mt-1" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">E-mail remetente</label>
+              <Input value={form.fromEmail} onChange={set('fromEmail')} placeholder="noreply@sualoja.com" className="mt-1" />
+            </div>
+          </div>
+          {form.provider === 'resend' && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Resend API Key</label>
+              <Input value={form.resendApiKey} onChange={set('resendApiKey')} placeholder="re_..." type="password" className="mt-1" />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Notificações ativas</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {[
+            { key: 'notifyLowStock', label: 'Estoque baixo' },
+            { key: 'notifyNfeError', label: 'Erro na NF-e' },
+            { key: 'notifyReturn', label: 'Devolução solicitada' },
+            { key: 'notifyNewOrder', label: 'Novo pedido' },
+          ].map(({ key, label }) => (
+            <label key={key} className="flex items-center justify-between text-sm cursor-pointer">
+              {label}
+              <div onClick={() => toggle(key)}
+                className={cn('relative h-5 w-9 rounded-full transition-colors cursor-pointer',
+                  (form as any)[key] ? 'bg-primary' : 'bg-muted border border-input')}>
+                <div className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform',
+                  (form as any)[key] ? 'translate-x-4' : 'translate-x-0.5')} />
+              </div>
+            </label>
+          ))}
+        </CardContent>
+      </Card>
+
+      <div className="flex gap-2">
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+          {save.isPending ? 'Salvando...' : 'Salvar configurações'}
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => test.mutate()} disabled={test.isPending || !form.fromEmail}>
+          <Send className="h-3.5 w-3.5" /> {test.isPending ? 'Enviando...' : 'Enviar teste'}
+        </Button>
+        {test.isSuccess && <span className="text-xs text-emerald-600 self-center">✓ E-mail enviado!</span>}
+      </div>
+    </div>
   )
 }
 

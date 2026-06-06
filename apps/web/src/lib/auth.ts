@@ -21,7 +21,7 @@ interface AuthState {
   user: User | null
   tenant: Tenant | null
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<{ requires2fa?: boolean; tempToken?: string }>
   register: (tenantName: string, name: string, email: string, password: string) => Promise<void>
   logout: () => void
   hydrate: () => Promise<void>
@@ -37,8 +37,10 @@ export const useAuth = create<AuthState>()(
 
       login: async (email, password) => {
         const { data } = await api.post('/auth/login', { email, password })
+        if (data.requires2fa) return { requires2fa: true, tempToken: data.tempToken }
         localStorage.setItem('sellsync:token', data.token)
         set({ token: data.token, user: data.user, tenant: data.tenant, isAuthenticated: true })
+        return {}
       },
 
       register: async (tenantName, name, email, password) => {

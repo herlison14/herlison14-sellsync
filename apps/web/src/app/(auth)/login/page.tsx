@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Zap, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Zap, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
+import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -15,6 +16,8 @@ export default function LoginPage() {
   const [showPwd, setShowPwd] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [tempToken, setTempToken] = useState('')
+  const [totpCode, setTotpCode] = useState('')
   const { login } = useAuth()
   const router = useRouter()
 
@@ -23,13 +26,66 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
-      router.push('/dashboard')
+      const result = await login(email, password)
+      if (result?.requires2fa && result.tempToken) {
+        setTempToken(result.tempToken)
+      } else {
+        router.push('/dashboard')
+      }
     } catch {
       setError('E-mail ou senha inválidos.')
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleVerify2fa(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const { data } = await api.post('/2fa/verify', { token: totpCode, tempToken })
+      localStorage.setItem('sellsync:token', data.token)
+      router.push('/dashboard')
+    } catch {
+      setError('Código incorreto. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (tempToken) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm space-y-6 animate-fade-in">
+          <div className="text-center space-y-2">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 mx-auto">
+              <ShieldCheck className="h-7 w-7 text-primary" />
+            </div>
+            <h1 className="text-xl font-bold">Autenticação em 2 fatores</h1>
+            <p className="text-sm text-muted-foreground">Digite o código de 6 dígitos do seu autenticador</p>
+          </div>
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" /> {error}
+            </div>
+          )}
+          <form onSubmit={handleVerify2fa} className="space-y-4">
+            <Input
+              value={totpCode} onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="000000" className="text-center text-2xl tracking-[0.5em] font-mono h-14"
+              maxLength={6} autoFocus inputMode="numeric"
+            />
+            <Button type="submit" className="w-full" disabled={totpCode.length !== 6 || loading}>
+              {loading ? 'Verificando...' : 'Verificar'}
+            </Button>
+          </form>
+          <button onClick={() => setTempToken('')} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
+            ← Voltar ao login
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
