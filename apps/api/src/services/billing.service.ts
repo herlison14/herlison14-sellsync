@@ -1,7 +1,22 @@
 import Stripe from 'stripe'
 import { prisma } from '@sellsync/database'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', { apiVersion: '2025-02-24.acacia' })
+// Lazy: o SDK do Stripe agora lança na construção se a apiKey vier vazia
+// (versões novas não toleram mais string vazia como antes) — se
+// instanciássemos aqui no topo do módulo, o processo inteiro derrubava no
+// boot sempre que STRIPE_SECRET_KEY não estivesse configurada (billing
+// ainda não é usado por nenhuma rota habilitada). Só falha, com mensagem
+// clara, se algo realmente chamar uma rota de billing sem a chave.
+let _stripe: Stripe | null = null
+function getStripe(): Stripe {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY não configurada — billing indisponível.')
+  }
+  if (!_stripe) {
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-02-24.acacia' })
+  }
+  return _stripe
+}
 
 export const PLANS = {
   FREE: {
@@ -35,7 +50,7 @@ export class BillingService {
 
     const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } })
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: successUrl,
@@ -55,10 +70,10 @@ export class BillingService {
     const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } })
 
     // Busca customerId salvo (em produção, salvar no banco)
-    const customers = await stripe.customers.search({ query: `metadata['tenantId']:'${tenantId}'` })
+    const customers = await getStripe().customers.search({ query: `metadata['tenantId']:'${tenantId}'` })
     if (!customers.data.length) throw new Error('Nenhuma assinatura encontrada')
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: customers.data[0].id,
       return_url: returnUrl,
     })
@@ -67,7 +82,7 @@ export class BillingService {
   }
 
   async handleWebhook(rawBody: Buffer, signature: string) {
-    const event = stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET!)
+    const event = getStripe().webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET!)
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session
