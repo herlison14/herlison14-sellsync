@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, ShoppingCart, Warehouse, Package,
-  Plug, DollarSign, BarChart3, Settings, ChevronRight,
+  Plug, DollarSign, BarChart3, Settings,
   Zap, Banknote, PackageX, Activity, RefreshCw, Layers, Truck, Megaphone, Shield, Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -33,15 +33,15 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="flex w-60 flex-shrink-0 flex-col border-r border-border bg-card">
+    <aside className="flex w-60 flex-shrink-0 flex-col bg-sidebar text-sidebar-foreground">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm">
-          <Zap className="h-4 w-4 text-primary-foreground" strokeWidth={2.5} />
+      <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-accent shadow-glow">
+          <Zap className="h-4 w-4 text-sidebar-accent-foreground" strokeWidth={2.5} />
         </div>
         <div>
-          <p className="text-sm font-bold tracking-tight text-foreground">SellSync</p>
-          <p className="text-[10px] text-muted-foreground leading-none">Hub Multichannel</p>
+          <p className="text-sm font-bold tracking-tight">SellSync</p>
+          <p className="text-[10px] text-sidebar-muted-foreground leading-none">Hub Multichannel</p>
         </div>
       </div>
 
@@ -55,18 +55,26 @@ export function Sidebar() {
                 key={href}
                 href={href}
                 className={cn(
-                  'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+                  'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
                   active
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    ? 'bg-sidebar-hover text-sidebar-foreground'
+                    : 'text-sidebar-muted-foreground hover:bg-sidebar-hover hover:text-sidebar-foreground'
                 )}
               >
+                {/* Indicador de item ativo — barra fina, não preenche o
+                    item inteiro de cor sólida (mantém a régua legível
+                    mesmo com 17 itens). */}
+                <span
+                  className={cn(
+                    'absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-sidebar-accent transition-opacity',
+                    active ? 'opacity-100' : 'opacity-0'
+                  )}
+                />
                 <Icon
-                  className={cn('h-4 w-4 shrink-0 transition-transform duration-150', !active && 'group-hover:scale-110')}
+                  className={cn('h-4 w-4 shrink-0 transition-transform duration-150', active ? 'text-sidebar-accent' : 'group-hover:scale-110')}
                   strokeWidth={active ? 2.5 : 2}
                 />
                 <span className="flex-1">{label}</span>
-                {active && <ChevronRight className="h-3 w-3 opacity-70" />}
               </Link>
             )
           })}
@@ -74,17 +82,17 @@ export function Sidebar() {
       </nav>
 
       {/* Plan badge */}
-      <div className="border-t border-border p-3">
-        <div className="rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-primary">Plano FREE</span>
-            <span className="text-[10px] font-medium text-muted-foreground">0/5 canais</span>
+      <div className="border-t border-sidebar-border p-3">
+        <div className="bg-glow rounded-lg border border-sidebar-border bg-sidebar-hover p-3" style={{ '--glow-x': '90%', '--glow-y': '0%' } as React.CSSProperties}>
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-xs font-semibold text-sidebar-foreground">Plano FREE</span>
+            <span className="text-[10px] font-medium text-sidebar-muted-foreground">0/5 canais</span>
           </div>
           <Link
             href="/dashboard/settings"
-            className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1"
+            className="flex items-center gap-1 text-xs font-medium text-sidebar-accent hover:brightness-125"
           >
-            Fazer upgrade <ChevronRight className="h-3 w-3" />
+            Fazer upgrade →
           </Link>
         </div>
       </div>

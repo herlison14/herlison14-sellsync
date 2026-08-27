@@ -4,32 +4,48 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 224 16% 12%;
+    /* Área de trabalho — neutro levemente frio (não cinza clínico), pra
+       combinar com o azul-índigo da marca sem competir com dado denso
+       (tabelas, KPIs) que domina a maior parte da tela. */
+    --background: 220 23% 97%;
+    --foreground: 222 44% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 16% 12%;
+    --card-foreground: 222 44% 11%;
 
-    --primary: 221 83% 53%;
-    --primary-foreground: 0 0% 100%;
+    /* Índigo-cobalto vívido — mais saturado que um azul de SaaS genérico,
+       serve de "sinal" (a marca já usa raio/sincronização como conceito). */
+    --primary: 234 82% 58%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 224 16% 12%;
+    --secondary: 220 20% 95%;
+    --secondary-foreground: 222 40% 15%;
 
-    --muted: 220 14% 96%;
+    --muted: 220 18% 95%;
     --muted-foreground: 220 9% 46%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 224 16% 12%;
+    --accent: 234 55% 96%;
+    --accent-foreground: 234 70% 32%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 221 83% 53%;
+    --border: 220 16% 90%;
+    --input: 220 16% 90%;
+    --ring: 234 82% 58%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
+
+    /* Sidebar — grafite escuro, superfície própria (não deriva de --card)
+       pra criar a régua de navegação com identidade visual distinta do
+       resto do painel, que fica claro/denso em dado. */
+    --sidebar: 228 26% 9%;
+    --sidebar-foreground: 210 20% 92%;
+    --sidebar-muted-foreground: 222 12% 58%;
+    --sidebar-border: 228 20% 17%;
+    --sidebar-accent: 234 82% 58%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-hover: 228 22% 14%;
   }
 
   * {
@@ -40,6 +56,12 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Números tabulares por padrão em qualquer lugar que precise alinhar
+     coluna de dígito (preço, quantidade, %) — cai direto do font-mono. */
+  .font-mono {
+    font-feature-settings: "tnum" 1, "zero" 1;
   }
 
   /* Scrollbar */
@@ -54,5 +76,21 @@
     background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--secondary)) 50%, hsl(var(--muted)) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.6s infinite linear;
+  }
+
+  /* Halo radial sutil — usado no painel escuro do login e em cantos de
+     card de destaque. CSS puro, custo zero de performance (sem imagem,
+     sem blur pesado, é só um gradient). */
+  .bg-glow {
+    background-image: radial-gradient(600px circle at var(--glow-x, 20%) var(--glow-y, 20%), hsl(var(--primary) / 0.35), transparent 60%);
+  }
+
+  /* Grade fina de fundo — textura "console" no painel de branding do
+     login, puramente decorativa via CSS (sem SVG externo). */
+  .bg-grid {
+    background-image:
+      linear-gradient(hsl(var(--sidebar-border) / 0.6) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--sidebar-border) / 0.6) 1px, transparent 1px);
+    background-size: 32px 32px;
   }
 }

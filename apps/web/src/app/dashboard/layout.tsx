@@ -8,10 +8,10 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <QueryProvider>
-      <div className="flex h-screen overflow-hidden bg-muted/30">
+      <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
-          <header className="flex h-12 shrink-0 items-center justify-end border-b bg-card px-4 gap-2">
+          <header className="flex h-14 shrink-0 items-center justify-end gap-2 border-b border-border/70 bg-card/80 px-5 backdrop-blur-sm">
             <NotificationBell />
           </header>
           <OnboardingBanner />

@@ -9,7 +9,6 @@ import {
 import Link from 'next/link'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
-  BarChart, Bar, Cell, CartesianGrid,
 } from 'recharts'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,28 +18,37 @@ import { cn } from '@/lib/utils'
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
-function StatCard({ title, value, sub, icon: Icon, trend, colorClass, loading }: {
+function StatCard({ title, value, sub, icon: Icon, trend, tone, loading }: {
   title: string; value: string; sub: string; icon: React.ElementType
-  trend?: number; colorClass: string; loading?: boolean
+  trend?: number; tone: 'primary' | 'violet' | 'amber' | 'critical' | 'neutral'; loading?: boolean
 }) {
   if (loading) return <Skeleton className="h-32 rounded-xl" />
+
+  const TONE: Record<typeof tone, string> = {
+    primary: 'bg-primary/10 text-primary',
+    violet: 'bg-violet-500/10 text-violet-600',
+    amber: 'bg-amber-500/10 text-amber-600',
+    critical: 'bg-destructive/10 text-destructive',
+    neutral: 'bg-muted text-muted-foreground',
+  }
+
   return (
-    <Card className="animate-fade-in hover:shadow-card-hover transition-shadow duration-200">
+    <Card className="group animate-fade-in overflow-hidden transition-shadow duration-200 hover:shadow-card-hover">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold tracking-tight">{value}</p>
+            <p className="font-mono text-2xl font-bold tracking-tight tabular-nums">{value}</p>
             <p className="text-xs text-muted-foreground">{sub}</p>
           </div>
-          <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', colorClass)}>
+          <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105', TONE[tone])}>
             <Icon className="h-5 w-5" strokeWidth={2} />
           </div>
         </div>
         {trend !== undefined && (
           <div className="mt-4 flex items-center gap-1.5 border-t border-border pt-3">
-            {trend >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> : <TrendingDown className="h-3.5 w-3.5 text-red-500" />}
-            <span className={cn('text-xs font-bold', trend >= 0 ? 'text-emerald-600' : 'text-red-500')}>
+            {trend >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
+            <span className={cn('font-mono text-xs font-bold tabular-nums', trend >= 0 ? 'text-emerald-600' : 'text-destructive')}>
               {trend >= 0 ? '+' : ''}{trend}%
             </span>
             <span className="text-xs text-muted-foreground">vs. mês anterior</span>
@@ -83,9 +91,9 @@ const fmtShort = (v: number) => {
 function RevenueTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-lg border bg-card shadow-lg px-3 py-2.5 text-xs">
-      <p className="font-semibold text-muted-foreground mb-1">{label}</p>
-      <p className="font-bold text-base">{fmtCurrency(payload[0]?.value ?? 0)}</p>
+    <div className="rounded-lg border border-border bg-card px-3 py-2.5 text-xs shadow-card-hover">
+      <p className="mb-1 font-semibold text-muted-foreground">{label}</p>
+      <p className="font-mono text-base font-bold tabular-nums">{fmtCurrency(payload[0]?.value ?? 0)}</p>
       <p className="text-muted-foreground">{payload[1]?.value ?? 0} pedidos</p>
     </div>
   )
@@ -148,19 +156,19 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Visão geral do seu negócio</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+          <div className="flex gap-1 rounded-lg border border-border bg-card p-1">
             {PERIODS.map((p) => (
               <button key={p.days} onClick={() => setDays(p.days)}
                 className={cn('rounded-md px-3 py-1 text-xs font-semibold transition-all',
-                  days === p.days ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+                  days === p.days ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
                 {p.label}
               </button>
             ))}
           </div>
-          <Badge variant="secondary" className="text-xs font-medium hidden sm:flex">
+          <Badge variant="secondary" className="hidden text-xs font-medium sm:flex">
             {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })}
           </Badge>
         </div>
@@ -172,26 +180,26 @@ export default function DashboardPage() {
           title="Receita do período" loading={loadingOverview}
           value={fmtCurrency(overview?.totalRevenue ?? 0)}
           sub={`${overview?.totalOrders ?? 0} pedidos confirmados`}
-          icon={DollarSign} trend={0} colorClass="bg-blue-50 text-blue-600"
+          icon={DollarSign} trend={0} tone="primary"
         />
         <StatCard
           title="Ticket médio" loading={loadingOverview}
           value={fmtCurrency(overview?.averageTicket ?? 0)}
           sub="Por pedido no período"
-          icon={BarChart3} colorClass="bg-violet-50 text-violet-600"
+          icon={BarChart3} tone="violet"
         />
         <StatCard
           title="Pedidos pendentes"
           value={String(extras?.pendingOrders ?? 0)}
           sub="Aguardando processamento"
-          icon={ShoppingCart} colorClass="bg-amber-50 text-amber-600"
+          icon={ShoppingCart} tone="amber"
         />
         <StatCard
           title="Estoque crítico"
           value={String(extras?.lowStockCount ?? 0)}
           sub="Produtos abaixo do mínimo"
           icon={AlertTriangle}
-          colorClass={extras?.lowStockCount ? 'bg-red-50 text-red-500' : 'bg-muted text-muted-foreground'}
+          tone={extras?.lowStockCount ? 'critical' : 'neutral'}
         />
       </div>
 
@@ -209,7 +217,7 @@ export default function DashboardPage() {
             {loadingChart ? (
               <Skeleton className="h-52 w-full" />
             ) : chartData.length === 0 ? (
-              <div className="h-52 flex items-center justify-center text-sm text-muted-foreground">
+              <div className="flex h-52 items-center justify-center text-sm text-muted-foreground">
                 Sem dados para o período
               </div>
             ) : (
@@ -217,11 +225,10 @@ export default function DashboardPage() {
                 <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.15} />
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
                       <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
@@ -236,7 +243,7 @@ export default function DashboardPage() {
                   <Tooltip content={<RevenueTooltip />} />
                   <Area
                     type="monotone" dataKey="revenue" stroke="hsl(var(--primary))"
-                    strokeWidth={2} fill="url(#grad)" dot={false} activeDot={{ r: 4 }}
+                    strokeWidth={2.5} fill="url(#grad)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }}
                   />
                   <Area
                     type="monotone" dataKey="orders" stroke="hsl(var(--muted-foreground))"
@@ -260,7 +267,7 @@ export default function DashboardPage() {
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
               </div>
             ) : channelData.length === 0 ? (
-              <div className="h-40 flex flex-col items-center justify-center gap-2 text-center">
+              <div className="flex h-40 flex-col items-center justify-center gap-2 text-center">
                 <Plug className="h-8 w-8 text-muted-foreground/30" />
                 <p className="text-xs text-muted-foreground">Nenhum canal com vendas</p>
                 <Link href="/dashboard/integrations" className="text-xs text-primary hover:underline">
@@ -273,9 +280,9 @@ export default function DashboardPage() {
                   <div key={c.mp} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium">{c.name}</span>
-                      <span className="tabular-nums text-muted-foreground">{fmtCurrency(c.revenue)}</span>
+                      <span className="font-mono tabular-nums text-muted-foreground">{fmtCurrency(c.revenue)}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
@@ -296,28 +303,28 @@ export default function DashboardPage() {
       {/* Bottom row */}
       <div className="grid gap-4 lg:grid-cols-5">
         {/* Top products */}
-        <Card className="lg:col-span-3">
-          <CardHeader className="pb-2">
+        <Card className="lg:col-span-3 overflow-hidden py-0">
+          <CardHeader className="border-b border-border pb-3 pt-5">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm">Top 5 produtos</CardTitle>
-              <Link href="/dashboard/products" className="text-xs text-primary hover:underline flex items-center gap-0.5">
+              <Link href="/dashboard/products" className="flex items-center gap-0.5 text-xs text-primary hover:underline">
                 Ver todos <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             {loadingTop ? (
-              <div className="p-4 space-y-2">
+              <div className="space-y-2 p-4">
                 {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
               </div>
             ) : !topProducts?.length ? (
               <div className="py-10 text-center text-sm text-muted-foreground">
-                <Package className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                <Package className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                 Sem vendas no período
               </div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="border-b bg-muted/30">
+                <thead className="bg-muted/40">
                   <tr>
                     {['#', 'Produto', 'Qtd', 'Receita'].map((h) => (
                       <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">{h}</th>
@@ -326,14 +333,14 @@ export default function DashboardPage() {
                 </thead>
                 <tbody>
                   {(topProducts as any[]).map((p: any, i: number) => (
-                    <tr key={p.productId || p.sku} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-2.5 text-xs font-bold text-muted-foreground w-8">{i + 1}</td>
+                    <tr key={p.productId || p.sku} className="border-t border-border transition-colors last:border-b-0 hover:bg-muted/30">
+                      <td className="w-8 px-4 py-2.5 font-mono text-xs font-bold text-muted-foreground">{i + 1}</td>
                       <td className="px-4 py-2.5">
-                        <p className="font-medium text-sm truncate max-w-[200px]">{p.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{p.sku}</p>
+                        <p className="max-w-[200px] truncate text-sm font-medium">{p.name}</p>
+                        <p className="font-mono text-xs text-muted-foreground">{p.sku}</p>
                       </td>
-                      <td className="px-4 py-2.5 text-sm tabular-nums">{p.totalQty}</td>
-                      <td className="px-4 py-2.5 text-sm font-semibold tabular-nums">
+                      <td className="px-4 py-2.5 font-mono text-sm tabular-nums">{p.totalQty}</td>
+                      <td className="px-4 py-2.5 font-mono text-sm font-semibold tabular-nums">
                         {fmtCurrency(p.totalRevenue)}
                       </td>
                     </tr>
@@ -345,25 +352,28 @@ export default function DashboardPage() {
         </Card>
 
         {/* Quick actions + alerts */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
-          <Card>
-            <CardHeader className="pb-3">
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          <Card className="overflow-hidden py-0">
+            <CardHeader className="pb-3 pt-5">
               <CardTitle className="text-sm">Ações rápidas</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {[
-                { href: '/dashboard/orders',       label: 'Pedidos pendentes',  desc: `${extras?.pendingOrders ?? 0} aguardando`, color: 'hover:bg-amber-50/60' },
-                { href: '/dashboard/inventory',    label: 'Estoque baixo',      desc: `${extras?.lowStockCount ?? 0} produtos`, color: 'hover:bg-red-50/60' },
-                { href: '/dashboard/integrations', label: 'Canais ativos',      desc: `${extras?.connectedStores ?? 0} conectados`, color: 'hover:bg-blue-50/60' },
-                { href: '/dashboard/catalog',      label: 'Sync catálogo',      desc: 'Verificar divergências', color: 'hover:bg-purple-50/60' },
-              ].map(({ href, label, desc, color }) => (
+                { href: '/dashboard/orders',       label: 'Pedidos pendentes',  desc: `${extras?.pendingOrders ?? 0} aguardando`, tone: 'text-amber-600' },
+                { href: '/dashboard/inventory',    label: 'Estoque baixo',      desc: `${extras?.lowStockCount ?? 0} produtos`, tone: 'text-destructive' },
+                { href: '/dashboard/integrations', label: 'Canais ativos',      desc: `${extras?.connectedStores ?? 0} conectados`, tone: 'text-primary' },
+                { href: '/dashboard/catalog',      label: 'Sync catálogo',      desc: 'Verificar divergências', tone: 'text-violet-600' },
+              ].map(({ href, label, desc, tone }) => (
                 <Link key={href} href={href}
-                  className={cn('flex items-center justify-between px-4 py-3 border-b last:border-0 transition-colors', color)}>
-                  <div>
-                    <p className="text-sm font-medium">{label}</p>
-                    <p className="text-xs text-muted-foreground">{desc}</p>
+                  className="group flex items-center justify-between border-t border-border px-4 py-3 transition-colors first:border-t-0 hover:bg-muted/30">
+                  <div className="flex items-center gap-2.5">
+                    <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', tone.replace('text-', 'bg-'))} />
+                    <div>
+                      <p className="text-sm font-medium">{label}</p>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
+                    </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </Link>
               ))}
             </CardContent>
