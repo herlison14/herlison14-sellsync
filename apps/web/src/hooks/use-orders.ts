@@ -12,10 +12,17 @@ interface OrderFilters {
 }
 
 export function useOrders(filters: OrderFilters = {}) {
+  // A API valida status/marketplace como enum — mandar '' (valor default
+  // de "nenhum filtro selecionado" nos <select>) quebra com 400/500 em
+  // vez de ser tratado como "sem filtro". Remove qualquer campo vazio
+  // antes de montar a query string.
+  const params = Object.fromEntries(
+    Object.entries(filters).filter(([, v]) => v !== '' && v !== undefined && v !== null)
+  )
   return useQuery({
-    queryKey: ['orders', filters],
+    queryKey: ['orders', params],
     queryFn: async () => {
-      const { data } = await api.get('/orders', { params: filters })
+      const { data } = await api.get('/orders', { params })
       return data
     },
   })
