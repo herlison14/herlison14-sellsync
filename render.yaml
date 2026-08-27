@@ -52,6 +52,17 @@ services:
           type: keyvalue
           name: sellsync-redis
           property: connectionString
+      # Integração com a loja própria (HC Magazine / loja-descartaveis) —
+      # os dois segredos são sync:false de propósito (não ficam em texto
+      # puro no git); definir o valor real direto no dashboard do Render.
+      # Precisam bater exatamente com SELLSYNC_WEBHOOK_TOKEN e
+      # SELLSYNC_API_TOKEN configurados no Vercel do loja-descartaveis.
+      - key: LOJADESCARTAVEIS_WEBHOOK_SECRET
+        sync: false
+      - key: LOJADESCARTAVEIS_API_TOKEN
+        sync: false
+      - key: LOJADESCARTAVEIS_API_URL
+        value: https://loja-descartaveis.vercel.app
 
   - type: keyvalue
     name: sellsync-redis

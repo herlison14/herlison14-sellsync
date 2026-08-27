@@ -32,4 +32,25 @@ export async function webhooksRoutes(app: FastifyInstance) {
     await webhookQueue.add('amazon-notification', req.body, { attempts: 3, backoff: { type: 'exponential', delay: 2000 } })
     return reply.code(200).send()
   })
+
+  // loja-descartaveis (canal próprio, primeira parte) — integração de
+  // confiança, sem HMAC sobre o corpo como o Shopee: um bearer token fixo
+  // já basta, comparado em tempo constante pra evitar timing attack.
+  app.post('/lojadescartaveis', async (req, reply) => {
+    const auth = req.headers['authorization'] as string | undefined
+    const token = auth?.replace(/^Bearer\s+/i, '') ?? ''
+    const expected = process.env.LOJADESCARTAVEIS_WEBHOOK_SECRET ?? ''
+
+    const tokenBuf = Buffer.from(token)
+    const expectedBuf = Buffer.from(expected)
+    const valid =
+      tokenBuf.length === expectedBuf.length && crypto.timingSafeEqual(tokenBuf, expectedBuf)
+    if (!expected || !valid) return reply.code(401).send()
+
+    await webhookQueue.add('lojadescartaveis-notification', req.body, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 2000 },
+    })
+    return reply.code(200).send()
+  })
 }

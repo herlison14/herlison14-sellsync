@@ -3,6 +3,9 @@ import axios from 'axios'
 import { prisma } from '@sellsync/database'
 import { z } from 'zod'
 import { checkAllStoresHealth, checkStoreHealth } from '../services/health.service'
+import { CatalogImportService } from '../services/catalog-import.service'
+
+const catalogImportService = new CatalogImportService()
 
 export async function integrationsRoutes(app: FastifyInstance) {
   // ─── Mercado Livre OAuth ───────────────────────────────────────────────────
@@ -125,6 +128,44 @@ export async function integrationsRoutes(app: FastifyInstance) {
     })
 
     return reply.redirect(`${process.env.WEB_URL}/dashboard/integrations?connected=shopee`)
+  })
+
+  // ─── Loja própria (canal sem OAuth, token fixo) ────────────────────────────
+
+  app.post('/lojadescartaveis/connect', async (req, reply) => {
+    await req.jwtVerify()
+    const { tenantId } = req.user as { tenantId: string }
+    const { token, name } = z.object({
+      token: z.string().min(16),
+      name: z.string().min(1).default('HC Magazine'),
+    }).parse(req.body)
+
+    const store = await prisma.store.upsert({
+      where: { tenantId_marketplace_externalId: { tenantId, marketplace: 'LOJA_DESCARTAVEIS', externalId: 'hc-magazine' } },
+      create: {
+        tenantId,
+        marketplace: 'LOJA_DESCARTAVEIS',
+        name,
+        externalId: 'hc-magazine',
+        accessToken: token,
+      },
+      update: {
+        accessToken: token,
+        name,
+        isActive: true,
+      },
+    })
+
+    return reply.code(201).send({ id: store.id })
+  })
+
+  app.post('/lojadescartaveis/import', async (req, reply) => {
+    await req.jwtVerify()
+    const { tenantId } = req.user as { tenantId: string }
+    const { storeId } = z.object({ storeId: z.string() }).parse(req.body)
+
+    const result = await catalogImportService.importFromLojaDescartaveis(tenantId, storeId)
+    return reply.code(200).send(result)
   })
 
   // ─── Listar lojas conectadas ──────────────────────────────────────────────

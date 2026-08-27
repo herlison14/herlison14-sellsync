@@ -53,6 +53,7 @@ const MARKETPLACE_PING: Record<string, string> = {
   AMERICANAS: 'https://api.skyhub.com.br',
   SHEIN:      'https://openapi.sheincorp.com',
   TIKTOK_SHOP:'https://open-api.tiktokglobalshop.com',
+  LOJA_DESCARTAVEIS: process.env.LOJADESCARTAVEIS_API_URL ?? 'https://loja-descartaveis.vercel.app',
 }
 
 export async function checkStoreHealth(storeId: string): Promise<StoreHealth> {

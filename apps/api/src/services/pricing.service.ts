@@ -1,5 +1,6 @@
 import { prisma } from '@sellsync/database'
 import type { Marketplace, PricingType } from '@sellsync/database'
+import { MarketplaceAdapterFactory } from '@sellsync/integrations'
 import Decimal from 'decimal.js'
 
 interface SimulateParams {
@@ -92,7 +93,7 @@ export class PricingService {
   async syncPricesForProduct(tenantId: string, productId: string, baseCost: number) {
     const listings = await prisma.listing.findMany({
       where: { productId, store: { tenantId }, status: 'ACTIVE' },
-      include: { store: { select: { marketplace: true } } },
+      include: { store: true },
     })
 
     const updates = await Promise.all(
@@ -106,6 +107,17 @@ export class PricingService {
           where: { id: listing.id },
           data: { price: finalPrice },
         })
+      })
+    )
+
+    // Empurra o preço novo pro canal de verdade — antes disso, o preço
+    // recalculado só existia no nosso banco (nenhum adaptador tinha
+    // updatePrice() chamado em produção até agora, pra nenhum
+    // marketplace). Falha de um canal não trava os demais.
+    await Promise.allSettled(
+      listings.map(async (listing, i) => {
+        const adapter = await MarketplaceAdapterFactory.create(listing.store)
+        await adapter.updatePrice(listing.externalId, updates[i].price.toNumber())
       })
     )
 

@@ -6,6 +6,7 @@ import { MagaluAdapter } from './magalu/adapter'
 import { AmericanasAdapter } from './americanas/adapter'
 import { SheinAdapter } from './shein/adapter'
 import { TikTokShopAdapter } from './tiktokshop/adapter'
+import { LojaDescartaveisAdapter } from './lojadescartaveis/adapter'
 import type { IMarketplaceAdapter } from './base/adapter'
 
 export { MercadoLivreAdapter } from './mercadolivre/adapter'
@@ -15,6 +16,7 @@ export { MagaluAdapter } from './magalu/adapter'
 export { AmericanasAdapter } from './americanas/adapter'
 export { SheinAdapter } from './shein/adapter'
 export { TikTokShopAdapter } from './tiktokshop/adapter'
+export { LojaDescartaveisAdapter } from './lojadescartaveis/adapter'
 export type { IMarketplaceAdapter, MarketplaceOrder, MarketplaceListing } from './base/adapter'
 
 export class MarketplaceAdapterFactory {
@@ -66,6 +68,12 @@ export class MarketplaceAdapterFactory {
           process.env.TIKTOK_APP_SECRET!,
           store.accessToken,
           store.externalId,
+        )
+
+      case 'LOJA_DESCARTAVEIS':
+        return new LojaDescartaveisAdapter(
+          process.env.LOJADESCARTAVEIS_API_URL!,
+          store.accessToken,
         )
 
       default:

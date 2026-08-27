@@ -77,6 +77,7 @@ const CHANNEL_COLOR: Record<string, string> = {
   AMERICANAS: '#CC0000',
   SHEIN: '#111111',
   TIKTOK_SHOP: '#010101',
+  LOJA_DESCARTAVEIS: '#C65D3B', // terracota — mesma paleta da marca HC Magazine
 }
 
 const fmtCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })

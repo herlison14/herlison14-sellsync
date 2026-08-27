@@ -124,6 +124,7 @@ enum Marketplace {
   TIKTOK_SHOP
   SHOPIFY
   NUVEMSHOP
+  LOJA_DESCARTAVEIS
 }
 
 // ─── CATÁLOGO DE PRODUTOS (PIM) ───────────────────────────────────────────────
@@ -201,6 +202,7 @@ model Warehouse {
   tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   stockItems StockItem[]
 
+  @@unique([tenantId, name])
   @@map("warehouses")
 }
 

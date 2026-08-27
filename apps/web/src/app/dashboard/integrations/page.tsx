@@ -12,6 +12,7 @@ const AVAILABLE_MARKETPLACES = [
   { id: 'AMAZON', name: 'Amazon', logo: '/amazon.svg', oauthPath: '/integrations/amazon/connect' },
   { id: 'MAGALU', name: 'Magazine Luiza', logo: '/magalu.svg', oauthPath: '/integrations/magalu/connect' },
   { id: 'AMERICANAS', name: 'Americanas', logo: '/americanas.svg', oauthPath: '/integrations/americanas/connect' },
+  { id: 'LOJA_DESCARTAVEIS', name: 'HC Magazine (loja própria)', logo: '/hc-magazine.svg', oauthPath: '', manualConnect: true as const, connectSlug: 'lojadescartaveis' },
 ]
 
 export default function IntegrationsPage() {

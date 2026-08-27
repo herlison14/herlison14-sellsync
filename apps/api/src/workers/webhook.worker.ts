@@ -39,4 +39,18 @@ export async function processWebhook(job: Job) {
       }
     }
   }
+
+  // Canal próprio: o payload JÁ é o pedido completo (não um "avise que
+  // aconteceu algo, venha buscar depois" como ML/Shopee) — integração de
+  // primeira parte, não precisa do round-trip extra de ir buscar o pedido
+  // de volta na loja, e continua funcionando mesmo se a loja cair logo
+  // depois de enviar o webhook.
+  if (name === 'lojadescartaveis-notification') {
+    const store = await prisma.store.findFirst({
+      where: { marketplace: 'LOJA_DESCARTAVEIS' },
+    })
+    if (!store) return
+
+    await orderQueue.add('import-lojadescartaveis-order', { storeId: store.id, orderPayload: data })
+  }
 }

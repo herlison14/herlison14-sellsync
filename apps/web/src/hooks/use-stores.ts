@@ -20,3 +20,25 @@ export function useDisconnectStore() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['stores'] }),
   })
 }
+
+// Canal sem OAuth (loja própria) — conecta com um token fixo em vez de
+// redirecionar pra um provedor externo.
+export function useConnectManualStore() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ path, token, name }: { path: string; token: string; name?: string }) => {
+      const { data } = await api.post(`/integrations/${path}/connect`, { token, name })
+      return data as { id: string }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['stores'] }),
+  })
+}
+
+export function useImportLojaDescartaveisCatalog() {
+  return useMutation({
+    mutationFn: async (storeId: string) => {
+      const { data } = await api.post('/integrations/lojadescartaveis/import', { storeId })
+      return data as { imported: number; total: number }
+    },
+  })
+}

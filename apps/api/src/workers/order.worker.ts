@@ -1,19 +1,33 @@
 import type { Job } from 'bullmq'
 import { prisma, OrderStatus, Prisma } from '@sellsync/database'
-import { MarketplaceAdapterFactory } from '@sellsync/integrations'
+import { MarketplaceAdapterFactory, type MarketplaceOrder } from '@sellsync/integrations'
 import { inventorySyncQueue, nfeQueue } from './queues'
 import { notifyTenantNewOrder } from '../services/push.service'
+
+const IMPORT_JOBS = ['import-ml-order', 'import-shopee-order', 'import-lojadescartaveis-order']
 
 export async function processOrder(job: Job) {
   const { name, data } = job
 
-  if (name === 'import-ml-order' || name === 'import-shopee-order') {
-    const { storeId, externalId } = data as { storeId: string; externalId: string }
+  if (IMPORT_JOBS.includes(name)) {
+    const store = await prisma.store.findUniqueOrThrow({ where: { id: (data as { storeId: string }).storeId } })
 
-    const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } })
-    const adapter = await MarketplaceAdapterFactory.create(store)
-    const rawOrder = await adapter.getOrder(externalId)
+    // ML/Shopee só recebem um "avise que algo mudou" no webhook — o
+    // adaptador tem que ir buscar o pedido de verdade na API deles. O
+    // canal próprio já manda o pedido inteiro no payload do webhook (é
+    // primeira parte, não precisa desse round-trip).
+    let rawOrder: MarketplaceOrder
+    let externalId: string
+    if (name === 'import-lojadescartaveis-order') {
+      rawOrder = (data as { orderPayload: MarketplaceOrder }).orderPayload
+      externalId = rawOrder.externalId
+    } else {
+      externalId = (data as { externalId: string }).externalId
+      const adapter = await MarketplaceAdapterFactory.create(store)
+      rawOrder = await adapter.getOrder(externalId)
+    }
 
+    const { storeId } = data as { storeId: string }
     const order = await prisma.order.upsert({
       where: { storeId_externalId: { storeId, externalId } },
       create: {
@@ -88,8 +102,18 @@ function mapStatus(externalStatus: string, marketplace: string): OrderStatus {
     COMPLETED: 'DELIVERED',
     CANCELLED: 'CANCELLED',
   }
+  const lojaMap: Record<string, OrderStatus> = {
+    pending_payment: 'PENDING',
+    paid: 'CONFIRMED',
+    processing: 'CONFIRMED',
+    shipped: 'SHIPPED',
+    delivered: 'DELIVERED',
+    canceled: 'CANCELLED',
+    payment_expired: 'CANCELLED',
+  }
 
   if (marketplace === 'MERCADO_LIVRE') return mlMap[externalStatus] ?? 'PENDING'
   if (marketplace === 'SHOPEE') return shopeeMap[externalStatus] ?? 'PENDING'
+  if (marketplace === 'LOJA_DESCARTAVEIS') return lojaMap[externalStatus] ?? 'PENDING'
   return 'PENDING'
 }
