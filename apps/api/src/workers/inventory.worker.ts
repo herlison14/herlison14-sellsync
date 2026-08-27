@@ -38,7 +38,11 @@ export async function processInventorySync(job: Job<{ productId: string; tenantI
       select: { name: true, sku: true },
     })
     if (product) {
-      await notifyTenantLowStock(tenantId, [{ name: product.name, sku: product.sku, stock: available }])
+      try {
+        await notifyTenantLowStock(tenantId, [{ name: product.name, sku: product.sku, stock: available }])
+      } catch (err) {
+        console.error('notifyTenantLowStock falhou (sync de estoque já processado normalmente):', err)
+      }
     }
   }
 }

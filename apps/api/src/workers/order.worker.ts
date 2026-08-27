@@ -82,8 +82,16 @@ export async function processOrder(job: Job) {
       await nfeQueue.add('emit-nfe', { orderId: order.id, tenantId: store.tenantId })
     }
 
-    // Push notification for new orders
-    await notifyTenantNewOrder(store.tenantId, order.id, order.externalId)
+    // Push notification for new orders — nunca deixa uma falha aqui
+    // (Expo fora do ar, token inválido, etc.) derrubar o job inteiro:
+    // nessa altura o pedido já foi criado/atualizado com sucesso, e
+    // BullMQ marcaria o job inteiro como falho (e reprocessaria do
+    // zero) por causa só da notificação, que é um "nice to have".
+    try {
+      await notifyTenantNewOrder(store.tenantId, order.id, order.externalId)
+    } catch (err) {
+      console.error('notifyTenantNewOrder falhou (pedido já processado normalmente):', err)
+    }
   }
 }
 

@@ -63,8 +63,16 @@ export async function notifyTenantLowStock(tenantId: string, products: Array<{ n
 }
 
 async function getTokens(tenantId: string): Promise<string[]> {
-  const rows = await prisma.$queryRaw<Array<{ token: string }>>`
-    SELECT token FROM "PushToken" WHERE "tenantId" = ${tenantId}
-  `
+  // Antes usava $queryRaw com SELECT ... FROM "PushToken" — nome do
+  // model Prisma, não da tabela de verdade (@@map("push_tokens")).
+  // Sempre falhava em produção (42P01, relation "PushToken" does not
+  // exist) e derrubava o job inteiro do worker de pedidos, já que essa
+  // chamada não tinha try/catch em quem a invoca (notifyTenantNewOrder,
+  // chamado no fim de processOrder). O Client normal já resolve o nome
+  // mapeado certo, sem precisar de SQL cru pra uma query tão simples.
+  const rows = await prisma.pushToken.findMany({
+    where: { tenantId },
+    select: { token: true },
+  })
   return rows.map((r) => r.token)
 }
