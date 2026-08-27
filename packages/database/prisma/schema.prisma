@@ -279,6 +279,7 @@ model Order {
   deliveredAt    DateTime?
   cancelledAt    DateTime?
   trackingCode   String?
+  paymentMethod  String?
   nfeKey         String?
   nfeStatus      NfeStatus?
   externalData   Json        @default("{}")

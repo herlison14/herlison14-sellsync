@@ -15,6 +15,7 @@ export interface MarketplaceOrder {
   total: number
   shippingAddress: Record<string, unknown>
   paidAt?: Date
+  paymentMethod?: string
   rawData: Record<string, unknown>
 }
 

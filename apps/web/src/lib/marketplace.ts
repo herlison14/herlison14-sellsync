@@ -6,6 +6,7 @@ export const MP_EMOJI: Record<string, string> = {
   AMERICANAS:    '🔴',
   SHEIN:         '⚫',
   TIKTOK_SHOP:   '▶️',
+  LOJA_DESCARTAVEIS: '🌐',
 }
 
 export const MP_LABEL: Record<string, string> = {
@@ -16,6 +17,7 @@ export const MP_LABEL: Record<string, string> = {
   AMERICANAS:    'Americanas',
   SHEIN:         'Shein',
   TIKTOK_SHOP:   'TikTok Shop',
+  LOJA_DESCARTAVEIS: 'Site (loja própria)',
 }
 
 export const MARKETPLACES = Object.keys(MP_EMOJI) as string[]

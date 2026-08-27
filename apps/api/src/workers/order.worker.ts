@@ -43,6 +43,7 @@ export async function processOrder(job: Job) {
         shippingCost: rawOrder.shippingCost,
         total: rawOrder.total,
         paidAt: rawOrder.paidAt,
+        paymentMethod: rawOrder.paymentMethod,
         externalData: rawOrder.rawData as Prisma.InputJsonValue,
         items: {
           create: rawOrder.items.map((item) => ({
@@ -55,8 +56,15 @@ export async function processOrder(job: Job) {
           })),
         },
       },
+      // Antes só regravava status+externalData — um pedido que já existia
+      // (ex: virou CONFIRMED depois de criado como PENDING) nunca tinha
+      // paidAt/paymentMethod atualizados, mesmo chegando um novo webhook
+      // com esses dados. Emissão de NF-e (que depende de paidAt) nunca
+      // disparava nesse caminho de update por causa disso.
       update: {
         status: mapStatus(rawOrder.status, store.marketplace),
+        paidAt: rawOrder.paidAt,
+        paymentMethod: rawOrder.paymentMethod,
         externalData: rawOrder.rawData as Prisma.InputJsonValue,
       },
     })

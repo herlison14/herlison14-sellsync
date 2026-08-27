@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Package, MapPin, FileText, Truck, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Package, MapPin, FileText, Truck, RefreshCw, Store, CreditCard, User } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
-import { MP_EMOJI } from '@/lib/marketplace'
+import { MP_EMOJI, MP_LABEL } from '@/lib/marketplace'
 
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warning' | 'destructive' | 'secondary' | 'info' }> = {
@@ -84,7 +84,7 @@ export default function OrderDetailPage() {
             <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {order.marketplace.replace('_', ' ')} · {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            {MP_LABEL[order.marketplace] ?? order.marketplace.replace('_', ' ')} · {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
         <div className="flex gap-2">
@@ -171,10 +171,36 @@ export default function OrderDetailPage() {
 
         {/* Painel lateral */}
         <div className="space-y-4">
+          {/* Origem da compra + pagamento */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Store className="h-4 w-4 text-primary" /> Origem da compra
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-base">{MP_EMOJI[order.marketplace] ?? '🏪'}</span>
+                <div>
+                  <p className="font-medium">{MP_LABEL[order.marketplace] ?? order.marketplace.replace('_', ' ')}</p>
+                  <p className="text-xs text-muted-foreground">{order.store?.name}</p>
+                </div>
+              </div>
+              {order.paymentMethod && (
+                <div className="flex items-center gap-2 border-t pt-3 text-muted-foreground">
+                  <CreditCard className="h-3.5 w-3.5" />
+                  <span>Pago via <span className="font-medium text-foreground">{order.paymentMethod}</span></span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Comprador */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Comprador</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <User className="h-4 w-4 text-primary" /> Comprador
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1.5 text-sm">
               <p className="font-medium">{order.buyerName ?? '—'}</p>
