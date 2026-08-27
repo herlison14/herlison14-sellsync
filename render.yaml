@@ -1,0 +1,85 @@
+# Blueprint do backend do SellSync (apps/api) — o frontend (apps/web) já
+# está publicado à parte na Vercel (herlison14-sellsync.vercel.app) e
+# continua lá; isto aqui só sobe o que faltava: API + worker + Postgres +
+# fila (Redis/Key Value).
+#
+# Meilisearch (citado no docker-compose.yml de dev) NÃO entra aqui — não
+# tive código nenhum em apps/api que realmente o use (nem import, nem
+# variável MEILI_*), então subir o serviço agora seria custo/complexidade
+# sem função. Adicionar quando a busca dedicada for implementada de verdade.
+#
+# Plano: tudo no tier gratuito, exceto o Postgres — o Postgres free do
+# Render se autodestrói depois de 30 dias, inviável pra dado real.
+
+# envVarGroups não aceitam fromDatabase/fromService (só valor estático,
+# generateValue ou sync:false) — DATABASE_URL e REDIS_URL têm que ir
+# direto em cada service abaixo, por isso ficam duplicados ali.
+envVarGroups:
+  - name: sellsync-shared
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WEB_URL
+        value: https://herlison14-sellsync.vercel.app
+
+services:
+  - type: web
+    name: sellsync-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npx prisma generate --schema=packages/database/prisma/schema.prisma && npx turbo run build --filter=@sellsync/api
+    startCommand: node apps/api/dist/index.js
+    healthCheckPath: /healthz
+    envVars:
+      - fromGroup: sellsync-shared
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sellsync-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: sellsync-redis
+          property: connectionString
+
+  - type: worker
+    name: sellsync-worker
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npx prisma generate --schema=packages/database/prisma/schema.prisma && npx turbo run build --filter=@sellsync/api
+    startCommand: node apps/api/dist/workers/index.js
+    envVars:
+      - fromGroup: sellsync-shared
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sellsync-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: sellsync-redis
+          property: connectionString
+
+  - type: keyvalue
+    name: sellsync-redis
+    plan: free
+    region: oregon
+    # noeviction, não allkeys-lru: é backend de fila BullMQ, não cache —
+    # perder um job por eviction é pior que a fila encher e dar erro.
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+databases:
+  # ATENÇÃO: plano free — o Postgres é apagado automaticamente depois de
+  # 30 dias (decisão explícita, ver conversa). Se isso virar uso real,
+  # trocar pra "basic-256mb" ($6/mês) antes do banco expirar, ou fazer
+  # backup/export manual recorrente enquanto estiver no free.
+  - name: sellsync-db
+    plan: free
+    region: oregon
