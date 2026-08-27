@@ -45,9 +45,18 @@ export async function processWebhook(job: Job) {
   // primeira parte, não precisa do round-trip extra de ir buscar o pedido
   // de volta na loja, e continua funcionando mesmo se a loja cair logo
   // depois de enviar o webhook.
+  //
+  // LIMITAÇÃO CONHECIDA: a loja usa um único segredo compartilhado
+  // (SELLSYNC_WEBHOOK_TOKEN/URL, fixo por env var) pra avisar UM SellSync
+  // — o webhook não carrega nenhum identificador de tenant. isActive:true
+  // evita pegar uma conexão desativada por engano, mas se DOIS tenants
+  // tiverem esse canal conectado e ATIVO ao mesmo tempo, ainda é ambíguo
+  // (pega o primeiro que o banco devolver). Esse desenho assume "uma loja,
+  // um tenant gerenciando ela" — múltiplos tenants ativos simultâneos não
+  // é um caso suportado hoje.
   if (name === 'lojadescartaveis-notification') {
     const store = await prisma.store.findFirst({
-      where: { marketplace: 'LOJA_DESCARTAVEIS' },
+      where: { marketplace: 'LOJA_DESCARTAVEIS', isActive: true },
     })
     if (!store) return
 
