@@ -1,4 +1,4 @@
-import { prisma } from '@sellsync/database'
+import { prisma, Prisma } from '@sellsync/database'
 
 export interface AuditParams {
   tenantId: string
@@ -13,7 +13,13 @@ export interface AuditParams {
 }
 
 export async function logAudit(params: AuditParams) {
-  return prisma.auditLog.create({ data: params })
+  return prisma.auditLog.create({
+    data: {
+      ...params,
+      before: params.before as Prisma.InputJsonValue | undefined,
+      after: params.after as Prisma.InputJsonValue | undefined,
+    },
+  })
 }
 
 export async function listAuditLogs(tenantId: string, {

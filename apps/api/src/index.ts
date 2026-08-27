@@ -4,6 +4,7 @@ import jwt from '@fastify/jwt'
 import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
 import helmet from '@fastify/helmet'
+import rawBody from 'fastify-raw-body'
 
 // Fail fast on misconfigured secrets — prevents predictable defaults reaching production
 const REQUIRED_SECRETS = ['JWT_SECRET', 'DATABASE_URL'] as const
@@ -66,6 +67,10 @@ async function bootstrap() {
   await app.register(jwt, { secret: process.env.JWT_SECRET! })
   await app.register(rateLimit, { max: 200, timeWindow: '1 minute' })
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } }) // 10 MB
+  // rawBody: só pro webhook do Stripe (config: { rawBody: true } por rota) —
+  // precisa dos bytes crus pra validar a assinatura HMAC; global:false pra
+  // não pagar o custo de guardar o body cru em toda rota.
+  await app.register(rawBody, { field: 'rawBody', global: false, runFirst: true })
 
   // Shared auth decorator — all routes using app.authenticate go through this
   app.decorate('authenticate', async function (req: any, reply: any) {

@@ -1,4 +1,4 @@
-import { PrismaClient, NotificationType } from '@prisma/client'
+import { PrismaClient, NotificationType, Prisma } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -14,7 +14,7 @@ export async function createNotification(tenantId: string, data: {
       title: data.title,
       body: data.body,
       link: data.link,
-      metadata: data.metadata ?? {},
+      metadata: (data.metadata ?? {}) as Prisma.InputJsonValue,
     },
   })
 }

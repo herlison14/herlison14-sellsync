@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
+import { Marketplace, RepricingStrategy } from '@sellsync/database'
 import {
   getRepricingRules,
   createRepricingRule,
@@ -11,14 +12,21 @@ import {
 } from '../services/repricing.service'
 import { requireRole } from '../lib/rbac'
 
+// Nomes de campo e valores de enum alinhados com repricing.service.ts —
+// o schema antigo ('LOWEST'/'AVERAGE'/'FIXED_MARGIN'/'CUSTOM', campo
+// 'margin') não correspondia a nada em RepricingStrategy nem na service,
+// então toda criação/atualização de regra falhava na tipagem (e teria
+// falhado em runtime também, silenciosamente perdendo os campos).
 const ruleSchema = z.object({
   name:             z.string().min(1).max(100),
-  marketplace:      z.string().optional(),
-  strategy:         z.enum(['LOWEST', 'AVERAGE', 'FIXED_MARGIN', 'CUSTOM']),
-  margin:           z.number().min(0).max(100).optional(),
+  listingId:        z.string().optional(),
+  marketplace:      z.nativeEnum(Marketplace).optional(),
+  strategy:         z.nativeEnum(RepricingStrategy),
+  targetMargin:     z.number().min(0).max(100).optional(),
   minPrice:         z.number().positive().optional(),
   maxPrice:         z.number().positive().optional(),
-  active:           z.boolean().optional(),
+  adjustmentPct:    z.number().optional(),
+  isActive:         z.boolean().optional(),
 })
 
 export async function repricingRoutes(app: FastifyInstance) {

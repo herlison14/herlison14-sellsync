@@ -1,5 +1,5 @@
 import type { Job } from 'bullmq'
-import { prisma } from '@sellsync/database'
+import { prisma, OrderStatus, Prisma } from '@sellsync/database'
 import { MarketplaceAdapterFactory } from '@sellsync/integrations'
 import { inventorySyncQueue, nfeQueue } from './queues'
 import { notifyTenantNewOrder } from '../services/push.service'
@@ -24,12 +24,12 @@ export async function processOrder(job: Job) {
         status: mapStatus(rawOrder.status, store.marketplace),
         buyerName: rawOrder.buyerName,
         buyerEmail: rawOrder.buyerEmail,
-        shippingAddr: rawOrder.shippingAddress,
+        shippingAddr: rawOrder.shippingAddress as Prisma.InputJsonValue,
         subtotal: rawOrder.subtotal,
         shippingCost: rawOrder.shippingCost,
         total: rawOrder.total,
         paidAt: rawOrder.paidAt,
-        externalData: rawOrder.rawData,
+        externalData: rawOrder.rawData as Prisma.InputJsonValue,
         items: {
           create: rawOrder.items.map((item) => ({
             externalId: item.externalId,
@@ -43,7 +43,7 @@ export async function processOrder(job: Job) {
       },
       update: {
         status: mapStatus(rawOrder.status, store.marketplace),
-        externalData: rawOrder.rawData,
+        externalData: rawOrder.rawData as Prisma.InputJsonValue,
       },
     })
 
@@ -73,15 +73,15 @@ export async function processOrder(job: Job) {
   }
 }
 
-function mapStatus(externalStatus: string, marketplace: string): string {
-  const mlMap: Record<string, string> = {
+function mapStatus(externalStatus: string, marketplace: string): OrderStatus {
+  const mlMap: Record<string, OrderStatus> = {
     confirmed: 'CONFIRMED',
     payment_in_process: 'PENDING',
     payment_required: 'PENDING',
     paid: 'CONFIRMED',
     cancelled: 'CANCELLED',
   }
-  const shopeeMap: Record<string, string> = {
+  const shopeeMap: Record<string, OrderStatus> = {
     UNPAID: 'PENDING',
     READY_TO_SHIP: 'CONFIRMED',
     SHIPPED: 'SHIPPED',

@@ -1,12 +1,12 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { PricingService } from '../services/pricing.service'
-import type { Marketplace } from '@sellsync/database'
+import { Marketplace, PricingType } from '@sellsync/database'
 
 const ruleSchema = z.object({
   name: z.string().min(1),
-  marketplace: z.enum(['MERCADO_LIVRE', 'SHOPEE', 'AMAZON', 'MAGALU', 'AMERICANAS', 'SHEIN', 'TIKTOK_SHOP', 'SHOPIFY', 'NUVEMSHOP']).optional(),
-  type: z.enum(['MARKUP_PERCENTAGE', 'MARGIN_PERCENTAGE', 'FIXED_ADDITION', 'FIXED_PRICE']),
+  marketplace: z.nativeEnum(Marketplace).optional(),
+  type: z.nativeEnum(PricingType),
   value: z.number().positive(),
   isActive: z.boolean().default(true),
 })

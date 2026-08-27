@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { prisma } from '@sellsync/database'
+import { prisma, Prisma } from '@sellsync/database'
 import { listingQueue } from '../workers/queues'
 
 const productSchema = z.object({
@@ -37,7 +37,7 @@ export async function productsRoutes(app: FastifyInstance) {
         where,
         include: {
           stockItems: { include: { warehouse: { select: { name: true } } } },
-          listings: { select: { id: true, marketplace: false, storeId: true, status: true, price: true, store: { select: { marketplace: true } } } },
+          listings: { select: { id: true, storeId: true, status: true, price: true, store: { select: { marketplace: true } } } },
           _count: { select: { listings: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -66,7 +66,9 @@ export async function productsRoutes(app: FastifyInstance) {
   app.post('/', async (req, reply) => {
     const tenantId = (req.user as { tenantId: string }).tenantId
     const body = productSchema.parse(req.body)
-    const product = await prisma.product.create({ data: { tenantId, ...body } })
+    const product = await prisma.product.create({
+      data: { tenantId, ...body, attributes: body.attributes as Prisma.InputJsonValue },
+    })
     return reply.code(201).send(product)
   })
 
@@ -74,7 +76,10 @@ export async function productsRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string }
     const tenantId = (req.user as { tenantId: string }).tenantId
     const body = productSchema.partial().parse(req.body)
-    return prisma.product.update({ where: { id, tenantId }, data: body })
+    return prisma.product.update({
+      where: { id, tenantId },
+      data: { ...body, attributes: body.attributes as Prisma.InputJsonValue | undefined },
+    })
   })
 
   app.delete('/:id', async (req, reply) => {

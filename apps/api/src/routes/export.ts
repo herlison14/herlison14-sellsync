@@ -77,7 +77,8 @@ export async function exportRoutes(app: FastifyInstance) {
     const { format } = periodSchema.parse(req.query)
 
     const items = await prisma.stockItem.findMany({
-      where: { tenantId },
+      // StockItem não tem tenantId próprio — escopo vem do produto (ver schema.prisma)
+      where: { product: { tenantId } },
       include: {
         product: { select: { name: true, sku: true, brand: true, ncm: true } },
         warehouse: { select: { name: true } },
@@ -94,7 +95,7 @@ export async function exportRoutes(app: FastifyInstance) {
       'Quantidade': i.quantity,
       'Reservado': i.reserved,
       'Disponível': i.quantity - i.reserved,
-      'Mínimo': i.minStock ?? '',
+      'Mínimo': i.minAlert ?? '',
     }))
 
     const fname = `estoque_${new Date().toISOString().slice(0, 10)}`
@@ -148,7 +149,7 @@ export async function exportRoutes(app: FastifyInstance) {
       'Descrição': t.description,
       'Valor (R$)': Number(t.amount).toFixed(2),
       'Canal': t.marketplace ?? '',
-      'Referência': t.referenceId ?? '',
+      'Referência': t.externalId ?? '',
       'Data': new Date(t.createdAt).toLocaleString('pt-BR'),
     }))
 

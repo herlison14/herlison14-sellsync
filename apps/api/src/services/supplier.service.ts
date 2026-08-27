@@ -119,22 +119,21 @@ export async function receivePurchaseOrder(tenantId: string, id: string, items: 
       const newReceived = poItem.receivedQty + recv.receivedQty
       await tx.purchaseOrderItem.update({ where: { id: recv.itemId }, data: { receivedQty: newReceived } })
 
-      // Update or create stock
+      // Update or create stock — StockItem/StockMovement não têm tenantId
+      // próprio (escopo vem de product/warehouse, ver schema.prisma)
       await tx.stockItem.upsert({
         where: { productId_warehouseId: { productId: poItem.productId, warehouseId } },
         update: { quantity: { increment: recv.receivedQty } },
-        create: { productId: poItem.productId, warehouseId, tenantId, quantity: recv.receivedQty },
+        create: { productId: poItem.productId, warehouseId, quantity: recv.receivedQty },
       })
 
       await tx.stockMovement.create({
         data: {
-          tenantId,
           productId: poItem.productId,
           warehouseId,
           type: 'IN',
           quantity: recv.receivedQty,
-          reason: `Recebimento OC ${po.number}`,
-          referenceId: po.id,
+          reason: `Recebimento OC ${po.number} (${po.id})`,
         },
       })
     }

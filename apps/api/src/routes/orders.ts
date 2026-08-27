@@ -1,12 +1,13 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
+import { OrderStatus, Marketplace } from '@sellsync/database'
 import { OrderService } from '../services/order.service'
 
 const listQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(20),
-  status: z.string().optional(),
-  marketplace: z.string().optional(),
+  status: z.nativeEnum(OrderStatus).optional(),
+  marketplace: z.nativeEnum(Marketplace).optional(),
   search: z.string().optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),

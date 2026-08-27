@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@sellsync/database'
 import { generateSecret, verifyTotp, getTotpUri, getQrCodeUrl } from '../services/totp.service'
+import type { Role } from '../lib/rbac'
 
 export async function twoFactorRoutes(app: FastifyInstance) {
   app.addHook('onRequest', async (req) => { await req.jwtVerify() })
@@ -68,7 +69,7 @@ export async function twoFactorRoutes(app: FastifyInstance) {
   app.post('/verify', async (req, reply) => {
     const { token, tempToken } = z.object({ token: z.string().length(6), tempToken: z.string() }).parse(req.body)
 
-    let payload: { userId: string; tenantId: string; role: string; pending2fa: boolean }
+    let payload: { userId: string; tenantId: string; role: Role; pending2fa: boolean }
     try {
       payload = app.jwt.verify(tempToken) as any
     } catch {
@@ -77,10 +78,11 @@ export async function twoFactorRoutes(app: FastifyInstance) {
 
     if (!payload.pending2fa) return reply.code(400).send({ error: 'Token não requer 2FA' })
 
+    // select + include não podem coexistir no Prisma — o `tenant` incluído
+    // aqui nunca era lido abaixo, então só sobra o select.
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: payload.userId },
       select: { twoFactorSecret: true, twoFactorEnabled: true },
-      include: { tenant: { select: { id: true, name: true, slug: true, plan: true } } } as any,
     })
 
     if (!user.twoFactorEnabled || !user.twoFactorSecret) return reply.code(400).send({ error: '2FA não configurado' })

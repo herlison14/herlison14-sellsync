@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
-type Role = 'OWNER' | 'ADMIN' | 'OPERATOR'
+export type Role = 'OWNER' | 'ADMIN' | 'OPERATOR'
 
 export function requireRole(...roles: Role[]) {
   return async (req: FastifyRequest, reply: FastifyReply) => {

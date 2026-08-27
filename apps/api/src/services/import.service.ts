@@ -43,7 +43,10 @@ export async function parseSpreadsheet(buffer: Buffer, mimetype: string): Promis
   } else {
     // XLSX: magic bytes 50 4B 03 04 (ZIP/Office Open XML)
     const wb = new ExcelJS.Workbook()
-    await wb.xlsx.load(buffer)
+    // exceljs tipa esse parâmetro contra uma versão mais antiga de
+    // @types/node (Buffer sem o genérico ArrayBufferLike) — incompatibilidade
+    // só de tipo, o valor em si é um Buffer normal.
+    await wb.xlsx.load(buffer as unknown as Parameters<typeof wb.xlsx.load>[0])
     const ws = wb.worksheets[0]
     if (!ws) return []
     const headers: string[] = []

@@ -1,5 +1,5 @@
 import { prisma } from '@sellsync/database'
-import type { Marketplace } from '@sellsync/database'
+import type { Marketplace, PricingType } from '@sellsync/database'
 import Decimal from 'decimal.js'
 
 interface SimulateParams {
@@ -30,7 +30,7 @@ export class PricingService {
 
   async updateRule(tenantId: string, ruleId: string, data: Partial<{
     name: string
-    type: string
+    type: PricingType
     value: number
     isActive: boolean
   }>) {

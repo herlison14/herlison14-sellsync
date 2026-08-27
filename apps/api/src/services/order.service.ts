@@ -1,12 +1,12 @@
-import { prisma } from '@sellsync/database'
+import { prisma, OrderStatus, Marketplace } from '@sellsync/database'
 import { nfeQueue } from '../workers/queues'
 
 interface ListParams {
   tenantId: string
   page: number
   limit: number
-  status?: string
-  marketplace?: string
+  status?: OrderStatus
+  marketplace?: Marketplace
   search?: string
   from?: string
   to?: string
