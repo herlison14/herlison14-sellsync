@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle, AlertTriangle, ShieldCheck, ShieldOff, Mail, Send } from 'lucide-react'
@@ -14,7 +14,16 @@ import { cn } from '@/lib/utils'
 const TABS = ['Empresa', 'Fiscal (NF-e)', 'Armazéns', 'Equipe', 'Segurança', 'E-mail', 'Plano'] as const
 type Tab = typeof TABS[number]
 
+// useSearchParams() exige um limite de Suspense (Next.js App Router)
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsPageContent />
+    </Suspense>
+  )
+}
+
+function SettingsPageContent() {
   const [tab, setTab] = useState<Tab>('Empresa')
   const params = useSearchParams()
   const upgradeStatus = params.get('upgrade')

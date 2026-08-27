@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { AlertCircle, Zap } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -8,7 +8,18 @@ import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
+// useSearchParams() exige um limite de Suspense pra não bloquear a
+// geração estática da página inteira (Next.js App Router) — o conteúdo
+// real fica no componente interno, isolado nesse limite.
 export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={null}>
+      <AcceptInviteContent />
+    </Suspense>
+  )
+}
+
+function AcceptInviteContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { hydrate } = useAuth()
