@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { api } from './api'
+import { setAuthToken, clearAuthToken } from './token'
 
 interface User {
   id: string
@@ -38,19 +39,19 @@ export const useAuth = create<AuthState>()(
       login: async (email, password) => {
         const { data } = await api.post('/auth/login', { email, password })
         if (data.requires2fa) return { requires2fa: true, tempToken: data.tempToken }
-        localStorage.setItem('sellsync:token', data.token)
+        setAuthToken(data.token)
         set({ token: data.token, user: data.user, tenant: data.tenant, isAuthenticated: true })
         return {}
       },
 
       register: async (tenantName, name, email, password) => {
         const { data } = await api.post('/auth/register', { tenantName, name, email, password })
-        localStorage.setItem('sellsync:token', data.token)
+        setAuthToken(data.token)
         set({ token: data.token, user: data.user, tenant: data.tenant, isAuthenticated: true })
       },
 
       logout: () => {
-        localStorage.removeItem('sellsync:token')
+        clearAuthToken()
         set({ token: null, user: null, tenant: null, isAuthenticated: false })
       },
 

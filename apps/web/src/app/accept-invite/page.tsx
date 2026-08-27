@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { AlertCircle, Zap } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
+import { setAuthToken } from '@/lib/token'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -41,7 +42,7 @@ function AcceptInviteContent() {
         name: form.name.trim(),
         password: form.password,
       })
-      localStorage.setItem('sellsync:token', res.data.token)
+      setAuthToken(res.data.token)
       useAuth.setState({ token: res.data.token, user: res.data.user, isAuthenticated: true })
       await hydrate()
       router.replace('/dashboard')

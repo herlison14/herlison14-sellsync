@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Zap, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { api } from '@/lib/api'
+import { setAuthToken } from '@/lib/token'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -18,7 +19,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [tempToken, setTempToken] = useState('')
   const [totpCode, setTotpCode] = useState('')
-  const { login } = useAuth()
+  const { login, hydrate } = useAuth()
   const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -45,7 +46,9 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const { data } = await api.post('/2fa/verify', { token: totpCode, tempToken })
-      localStorage.setItem('sellsync:token', data.token)
+      setAuthToken(data.token)
+      useAuth.setState({ token: data.token })
+      await hydrate() // /2fa/verify só devolve o token — hydrate() busca user/tenant via /auth/me
       router.push('/dashboard')
     } catch {
       setError('Código incorreto. Tente novamente.')
