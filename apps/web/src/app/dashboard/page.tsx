@@ -248,7 +248,7 @@ export default function DashboardPage() {
                   <Area
                     type="monotone" dataKey="orders" stroke="hsl(var(--muted-foreground))"
                     strokeWidth={1.5} fill="transparent" dot={false} strokeDasharray="4 2"
-                    yAxisId={1} hide
+                    hide
                   />
                 </AreaChart>
               </ResponsiveContainer>
